@@ -345,8 +345,8 @@ private fun ProfilesCard(
                     name = userName,
                     info = "Main profile • $bloodType",
                     selected = true,
-                    isYou = true,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    isYou = true
                 )
 
                 ProfileMiniCard(
@@ -365,9 +365,11 @@ private fun ProfileMiniCard(
     name: String,
     info: String,
     selected: Boolean,
-    isYou: Boolean = false,
-    modifier: Modifier = Modifier
-) {
+    modifier: Modifier = Modifier,
+    isYou: Boolean = false
+)
+
+{
     Card(
         modifier = modifier.height(70.dp),
         shape = RoundedCornerShape(16.dp),
