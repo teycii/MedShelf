@@ -68,8 +68,8 @@ fun DashboardScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
-                contentPadding = PaddingValues(top = 24.dp, bottom = 120.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                contentPadding = PaddingValues(top = 22.dp, bottom = 110.dp)
             ) {
                 item {
                     DashboardHeader(
@@ -95,53 +95,53 @@ fun DashboardScreen(
                 }
 
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        QuickCard(
-                            title = "Documents",
-                            subtitle = "View files",
-                            icon = Icons.Outlined.Folder,
-                            bgColor = Color(0xFFE6F7F4),
-                            iconColor = MedGreen,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            navController.navigate("document_library")
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            CompactQuickCard(
+                                title = "Documents",
+                                subtitle = "View files",
+                                icon = Icons.Outlined.Folder,
+                                bgColor = Color(0xFFE6F7F4),
+                                iconColor = MedGreen,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                navController.navigate("document_library")
+                            }
+
+                            CompactQuickCard(
+                                title = "Upload",
+                                subtitle = "Add new",
+                                icon = Icons.Filled.Add,
+                                bgColor = Color(0xFFE9FBEF),
+                                iconColor = Color(0xFF16A34A),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                navController.navigate("add_document")
+                            }
                         }
 
-                        QuickCard(
-                            title = "Reminders",
-                            subtitle = "Medication",
-                            icon = Icons.Outlined.Notifications,
-                            bgColor = Color(0xFFF0EAFE),
-                            iconColor = Color(0xFF7C3AED),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            navController.navigate("reminders")
-                        }
-                    }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            CompactQuickCard(
+                                title = "Reminders",
+                                subtitle = "Medication",
+                                icon = Icons.Outlined.Notifications,
+                                bgColor = Color(0xFFF0EAFE),
+                                iconColor = Color(0xFF7C3AED),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                navController.navigate("reminders")
+                            }
 
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        QuickCard(
-                            title = "Health Notes",
-                            subtitle = "Medical notes",
-                            icon = Icons.Outlined.EditNote,
-                            bgColor = Color(0xFFFFF4D8),
-                            iconColor = Color(0xFFF59E0B),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            navController.navigate("notes")
-                        }
-
-                        QuickCard(
-                            title = "Upload",
-                            subtitle = "Add new",
-                            icon = Icons.Filled.Add,
-                            bgColor = Color(0xFFE9FBEF),
-                            iconColor = Color(0xFF16A34A),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            navController.navigate("add_document")
+                            CompactQuickCard(
+                                title = "Health Notes",
+                                subtitle = "Medical notes",
+                                icon = Icons.Outlined.EditNote,
+                                bgColor = Color(0xFFFFF4D8),
+                                iconColor = Color(0xFFF59E0B),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                navController.navigate("notes")
+                            }
                         }
                     }
                 }
@@ -233,7 +233,7 @@ private fun DashboardHeader(navController: NavController) {
 }
 
 @Composable
-private fun QuickCard(
+private fun CompactQuickCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
@@ -244,47 +244,49 @@ private fun QuickCard(
 ) {
     Card(
         modifier = modifier
-            .height(130.dp)
+            .height(78.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp),
+        elevation = CardDefaults.cardElevation(1.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(54.dp)
-                    .background(bgColor, RoundedCornerShape(16.dp)),
+                    .size(42.dp)
+                    .background(bgColor, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = iconColor,
-                    modifier = Modifier.size(30.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
-            Text(
-                text = title,
-                fontWeight = FontWeight.Bold,
-                color = DarkText
-            )
+            Column {
+                Text(
+                    text = title,
+                    fontWeight = FontWeight.Bold,
+                    color = DarkText,
+                    style = MaterialTheme.typography.bodyMedium
+                )
 
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = SoftText
-            )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SoftText
+                )
+            }
         }
     }
 }
@@ -519,7 +521,7 @@ private fun RecentDocumentsCard(navController: NavController) {
                 iconColor = MedGreen
             )
 
-            Divider(color = SoftBorder)
+            HorizontalDivider(color = SoftBorder)
 
             DocumentRow(
                 title = "Chest X-Ray",
@@ -529,7 +531,7 @@ private fun RecentDocumentsCard(navController: NavController) {
                 iconColor = Color(0xFF7C3AED)
             )
 
-            Divider(color = SoftBorder)
+            HorizontalDivider(color = SoftBorder)
 
             DocumentRow(
                 title = "Vaccination Record",
