@@ -96,8 +96,8 @@ fun RegistrationScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 22.dp)
-                    .padding(top = 22.dp, bottom = 24.dp),
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 28.dp, bottom = 120.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 BrandHeader()
@@ -315,68 +315,67 @@ private fun HeroHeader() {
         }
 
         Box(
-            modifier = Modifier.size(122.dp),
+            modifier = Modifier
+                .size(92.dp)
+                .padding(end = 4.dp),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(78.dp)
-                    .offset(x = (-18).dp, y = 10.dp)
+                    .size(58.dp)
+                    .offset(x = (-12).dp, y = 8.dp)
                     .background(Color(0xFFE8F7F3), CircleShape)
-            )
-
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .offset(x = 28.dp, y = (-28).dp)
-                    .background(Color(0xFFEFFAF7), CircleShape)
             )
 
             Card(
                 modifier = Modifier
-                    .width(64.dp)
-                    .height(82.dp)
-                    .shadow(5.dp, RoundedCornerShape(12.dp)),
+                    .width(48.dp)
+                    .height(64.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 1.dp,
+                    color = SoftBorder
+                )
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(8.dp),
+                        .padding(7.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
                         modifier = Modifier
-                            .width(24.dp)
-                            .height(7.dp)
+                            .width(20.dp)
+                            .height(5.dp)
                             .background(Color(0xFF334155), RoundedCornerShape(4.dp))
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Icon(
                         imageVector = Icons.Filled.Person,
                         contentDescription = null,
                         tint = MedGreen,
-                        modifier = Modifier.size(25.dp)
+                        modifier = Modifier.size(20.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(7.dp))
 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(5.dp)
+                            .height(4.dp)
                             .background(Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
                     )
 
-                    Spacer(modifier = Modifier.height(5.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.65f)
-                            .height(5.dp)
+                            .fillMaxWidth(0.7f)
+                            .height(4.dp)
                             .background(Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
                     )
                 }
@@ -384,16 +383,16 @@ private fun HeroHeader() {
 
             Box(
                 modifier = Modifier
-                    .size(46.dp)
-                    .offset(x = 44.dp, y = 30.dp)
-                    .background(MedGreen, RoundedCornerShape(14.dp)),
+                    .size(34.dp)
+                    .offset(x = 31.dp, y = 22.dp)
+                    .background(MedGreen, RoundedCornerShape(11.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Filled.Add,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(26.dp)
+                    modifier = Modifier.size(21.dp)
                 )
             }
         }
@@ -408,19 +407,19 @@ private fun RegistrationSection(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.78f)
+            containerColor = Color.White
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,
-            color = SoftBorder.copy(alpha = 0.8f)
+            color = SoftBorder
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(13.dp)
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
@@ -429,14 +428,14 @@ private fun RegistrationSection(
                     imageVector = icon,
                     contentDescription = null,
                     tint = MedGreen,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
 
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(9.dp))
 
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF0F4F4A)
                 )
@@ -541,10 +540,10 @@ private fun RegistrationBottomBar(navController: NavController) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(86.dp),
+            .height(76.dp),
         color = Color.White,
-        shadowElevation = 10.dp,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        shadowElevation = 8.dp,
+        shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)
     ) {
         Row(
             modifier = Modifier
@@ -563,7 +562,7 @@ private fun RegistrationBottomBar(navController: NavController) {
 
             Box(
                 modifier = Modifier
-                    .size(58.dp)
+                    .size(54.dp)
                     .background(MedGreen, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -571,7 +570,7 @@ private fun RegistrationBottomBar(navController: NavController) {
                     imageVector = Icons.Filled.Add,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(34.dp)
+                    modifier = Modifier.size(31.dp)
                 )
             }
 
