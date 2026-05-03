@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Bloodtype
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.HealthAndSafety
@@ -29,7 +28,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -44,7 +42,6 @@ private val MedGreen = Color(0xFF009688)
 private val DarkText = Color(0xFF111827)
 private val SoftText = Color(0xFF64748B)
 private val SoftBorder = Color(0xFFE2E8F0)
-private val SoftBg = Color(0xFFF8FAFC)
 private val ErrorRed = Color(0xFFEF4444)
 
 @Composable
@@ -64,12 +61,12 @@ fun RegistrationScreen(
 
     var showErrors by remember { mutableStateOf(false) }
 
-    val firstNameError = showErrors && firstName.isBlank()
-    val lastNameError = showErrors && lastName.isBlank()
-    val ageError = showErrors && age.isBlank()
-    val bloodTypeError = showErrors && bloodType.isBlank()
-    val emergencyNameError = showErrors && emergencyContactName.isBlank()
-    val emergencyNumberError = showErrors && emergencyContactNumber.isBlank()
+    val firstNameError by remember { derivedStateOf { showErrors && firstName.isBlank() } }
+    val lastNameError by remember { derivedStateOf { showErrors && lastName.isBlank() } }
+    val ageError by remember { derivedStateOf { showErrors && age.isBlank() } }
+    val bloodTypeError by remember { derivedStateOf { showErrors && bloodType.isBlank() } }
+    val emergencyNameError by remember { derivedStateOf { showErrors && emergencyContactName.isBlank() } }
+    val emergencyNumberError by remember { derivedStateOf { showErrors && emergencyContactNumber.isBlank() } }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -308,7 +305,7 @@ private fun HeroHeader() {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Help us personalize your experience.",
+                text = "Create a profile for yourself or a family member.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = SoftText
             )
