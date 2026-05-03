@@ -1,16 +1,44 @@
 package com.example.medshelf.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Biotech
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,7 +47,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.compose.foundation.background
 import com.example.medshelf.viewmodel.DocumentViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,6 +62,13 @@ fun DocumentLibraryScreen(
         documentViewModel.loadDocuments()
     }
 
+    val categories = listOf(
+        CategoryItem("All", Icons.Default.Folder, MaterialTheme.colorScheme.primary),
+        CategoryItem("Lab Results", Icons.Default.Biotech, Color(0xFF0EA5E9)),
+        CategoryItem("Prescriptions", Icons.Default.Medication, Color(0xFF7C3AED)),
+        CategoryItem("Certificates", Icons.Default.Badge, Color(0xFFF59E0B))
+    )
+
     val filteredDocuments = if (selectedFilter == "All") {
         documents
     } else {
@@ -46,17 +80,16 @@ fun DocumentLibraryScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("My Documents", fontWeight = FontWeight.Bold)
                         Text(
-                            "All your important medical documents in one place",
+                            text = "My Documents",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = "All your important medical documents in one place",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.Description, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -88,46 +121,23 @@ fun DocumentLibraryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 20.dp)
         ) {
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth()
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+                contentPadding = PaddingValues(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                FilterButton(
-                    label = "All",
-                    selected = selectedFilter == "All",
-                    icon = Icons.Default.Folder,
-                    onClick = { selectedFilter = "All" }
-                )
-                FilterButton(
-                    label = "Lab Results",
-                    selected = selectedFilter == "Lab Results",
-                    icon = Icons.Default.Biotech,
-                    onClick = { selectedFilter = "Lab Results" }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                FilterButton(
-                    label = "Prescriptions",
-                    selected = selectedFilter == "Prescriptions",
-                    icon = Icons.Default.Medication,
-                    onClick = { selectedFilter = "Prescriptions" }
-                )
-                FilterButton(
-                    label = "Certificates",
-                    selected = selectedFilter == "Certificates",
-                    icon = Icons.Default.Badge,
-                    onClick = { selectedFilter = "Certificates" }
-                )
+                items(categories) { category ->
+                    CategoryCapsule(
+                        label = category.label,
+                        icon = category.icon,
+                        accentColor = category.color,
+                        selected = selectedFilter == category.label,
+                        onClick = { selectedFilter = category.label }
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(18.dp))
@@ -136,6 +146,11 @@ fun DocumentLibraryScreen(
                 columns = GridCells.Fixed(2),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(
+                    start = 20.dp,
+                    end = 20.dp,
+                    bottom = 100.dp
+                ),
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(filteredDocuments) { doc ->
@@ -155,38 +170,46 @@ fun DocumentLibraryScreen(
     }
 }
 
+data class CategoryItem(
+    val label: String,
+    val icon: ImageVector,
+    val color: Color
+)
+
 @Composable
-fun FilterButton(
+fun CategoryCapsule(
     label: String,
-    selected: Boolean,
     icon: ImageVector,
+    accentColor: Color,
+    selected: Boolean,
     onClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier
             .height(48.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(24.dp),
-        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-        tonalElevation = if (selected) 4.dp else 2.dp,
-        shadowElevation = if (selected) 4.dp else 1.dp
+        shape = RoundedCornerShape(50),
+        color = if (selected) accentColor else MaterialTheme.colorScheme.surface,
+        shadowElevation = if (selected) 5.dp else 2.dp,
+        tonalElevation = if (selected) 4.dp else 1.dp
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp),
+            modifier = Modifier.padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
-                icon,
-                contentDescription = null,
-                tint = if (selected) Color.White else MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (selected) Color.White else accentColor,
+                modifier = Modifier.size(20.dp)
             )
+
             Text(
                 text = label,
                 color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.labelLarge
             )
         }
     }
@@ -200,10 +223,12 @@ fun DocumentGridItem(title: String, type: String) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(210.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .height(215.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
     ) {
         Column(
             modifier = Modifier
@@ -217,22 +242,25 @@ fun DocumentGridItem(title: String, type: String) {
                 Box {
                     Box(
                         modifier = Modifier
-                            .size(66.dp)
-                            .background(accent.copy(alpha = 0.12f), PaperFoldShape),
+                            .size(68.dp)
+                            .background(
+                                color = accent.copy(alpha = 0.13f),
+                                shape = PaperFoldShape
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            icon,
+                            imageVector = icon,
                             contentDescription = null,
                             tint = accent,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(34.dp)
                         )
                     }
 
                     Surface(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .offset(x = 8.dp, y = 6.dp),
+                            .offset(x = 10.dp, y = 7.dp),
                         shape = RoundedCornerShape(6.dp),
                         color = MaterialTheme.colorScheme.primary
                     ) {
@@ -247,7 +275,7 @@ fun DocumentGridItem(title: String, type: String) {
                 }
 
                 Icon(
-                    Icons.Default.MoreVert,
+                    imageVector = Icons.Default.MoreVert,
                     contentDescription = "More",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -274,7 +302,7 @@ fun DocumentGridItem(title: String, type: String) {
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    Icons.Default.Folder,
+                    imageVector = Icons.Default.Folder,
                     contentDescription = null,
                     tint = accent,
                     modifier = Modifier.size(18.dp)
@@ -286,7 +314,8 @@ fun DocumentGridItem(title: String, type: String) {
                     text = type.ifBlank { "Uncategorized" },
                     color = accent,
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1
                 )
             }
         }
@@ -298,13 +327,14 @@ fun AddDocumentGridItem(onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(210.dp)
+            .height(215.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = CardDefaults.outlinedCardBorder()
+        border = CardDefaults.outlinedCardBorder(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -316,19 +346,19 @@ fun AddDocumentGridItem(onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                 ) {
                     Icon(
-                        Icons.Default.Add,
+                        imageVector = Icons.Default.Add,
                         contentDescription = "Add Document",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .padding(14.dp)
-                            .size(28.dp)
+                            .size(30.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    "Add Document",
+                    text = "Add Document",
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
