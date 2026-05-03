@@ -78,17 +78,23 @@ fun DashboardScreen(
                 }
 
                 item {
+                    val greeting = when (java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)) {
+                        in 0..11 -> "Good morning"
+                        in 12..17 -> "Good afternoon"
+                        else -> "Good evening"
+                    }
+
                     Text(
-                        text = "Good morning, $firstName",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.ExtraBold,
+                        text = "$greeting, $firstName",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
                         color = DarkText
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "Here's your health overview for today.",
+                        text = "Here's your health overview.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = SoftText
                     )
@@ -331,11 +337,15 @@ private fun ProfilesCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 ProfileMiniCard(
-                    name = "$userName  You",
+                    name = userName,
                     info = "Main profile • $bloodType",
                     selected = true,
+                    isYou = true,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -355,11 +365,12 @@ private fun ProfileMiniCard(
     name: String,
     info: String,
     selected: Boolean,
+    isYou: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.height(82.dp),
-        shape = RoundedCornerShape(18.dp),
+        modifier = modifier.height(70.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
@@ -369,34 +380,59 @@ private fun ProfileMiniCard(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp),
+                .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(36.dp)
                     .background(Color(0xFFE6F7F4), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (selected) Icons.Default.Person else Icons.Default.PersonAdd,
                     contentDescription = null,
-                    tint = MedGreen
+                    tint = MedGreen,
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Column {
-                Text(
-                    text = name,
-                    fontWeight = FontWeight.Bold,
-                    color = DarkText
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+
+                    Text(
+                        text = name,
+                        fontWeight = FontWeight.SemiBold,
+                        color = DarkText,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    if (isYou) {
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = MedGreen.copy(alpha = 0.12f),
+                                    shape = RoundedCornerShape(6.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "You",
+                                color = MedGreen,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
 
                 Text(
                     text = info,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = SoftText
                 )
             }
