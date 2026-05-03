@@ -242,7 +242,7 @@ private fun GreetingSection(firstName: String) {
 
     Text(
         text = "$greeting, $firstName",
-        style = MaterialTheme.typography.headlineSmall,
+        style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.ExtraBold,
         color = DarkText,
         maxLines = 2,
@@ -361,7 +361,7 @@ private fun QuickActionCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(38.dp)
                     .background(bgColor, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
@@ -369,7 +369,7 @@ private fun QuickActionCard(
                     imageVector = icon,
                     contentDescription = null,
                     tint = iconColor,
-                    modifier = Modifier.size(25.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
@@ -380,14 +380,16 @@ private fun QuickActionCard(
                 fontWeight = FontWeight.Bold,
                 color = DarkText,
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.bodySmall,
                 color = SoftText,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -836,7 +838,7 @@ private fun DashboardBottomBar(navController: NavController) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(76.dp),
+            .height(86.dp),
         color = Color.White,
         shadowElevation = 10.dp,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
@@ -898,7 +900,7 @@ private fun BottomItem(
                 imageVector = icon,
                 contentDescription = null,
                 tint = if (selected) MedGreen else SoftText,
-                modifier = Modifier.size(23.dp)
+                modifier = Modifier.size(21.dp)
             )
 
             Text(

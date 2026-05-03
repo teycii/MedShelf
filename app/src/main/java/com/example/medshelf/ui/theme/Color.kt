@@ -2,7 +2,7 @@ package com.example.medshelf.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Teal = Color(0xFF009488)
+val Teal = Color(0xFF009688)
 val Mint = Color(0xFF74BBA6)
 val BgLight = Color(0xFFF0FDF4)
 val White = Color(0xFFFBFAFC)
