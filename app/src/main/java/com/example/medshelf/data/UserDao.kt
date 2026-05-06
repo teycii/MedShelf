@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.medshelf.model.UserEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface UserDao {
@@ -13,5 +14,5 @@ interface UserDao {
     suspend fun saveUser(user: UserEntity)
 
     @Query("SELECT * FROM user_profile WHERE id = 1")
-    suspend fun getUser(): UserEntity?
+    fun getUser(): Flow<UserEntity?>
 }

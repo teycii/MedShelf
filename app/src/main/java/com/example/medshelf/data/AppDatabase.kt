@@ -7,17 +7,18 @@ import androidx.room.RoomDatabase
 import com.example.medshelf.model.DocumentEntity
 import com.example.medshelf.model.UserEntity
 
-const val DATABASE_NAME = "document_database"
-
 @Database(
-    entities = [DocumentEntity::class, UserEntity::class],
+    entities = [
+        UserEntity::class,
+        DocumentEntity::class
+    ],
     version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
-    abstract fun documentDao(): DocumentDao
     abstract fun userDao(): UserDao
+    abstract fun documentDao(): DocumentDao
 
     companion object {
         @Volatile
@@ -28,7 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    DATABASE_NAME
+                    "medshelf_database"
                 )
                     .fallbackToDestructiveMigration()
                     .build()

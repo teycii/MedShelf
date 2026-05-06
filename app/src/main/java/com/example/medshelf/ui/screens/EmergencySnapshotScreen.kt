@@ -11,7 +11,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,11 +26,7 @@ fun EmergencySnapshotScreen(
     navController: NavController,
     userViewModel: UserViewModel
 ) {
-    LaunchedEffect(Unit) {
-        userViewModel.loadUser()
-    }
-
-    val user = userViewModel.user.value
+    val user by userViewModel.user.collectAsState()
 
     Box(
         modifier = Modifier
@@ -69,19 +66,20 @@ fun EmergencySnapshotScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            val currentUser = user
             EmergencyInfoCard(
                 "Name",
-                if (user != null) "${user.firstName} ${user.lastName}" else "Not set"
+                if (currentUser != null) "${currentUser.firstName} ${currentUser.lastName}" else "Not set"
             )
-            EmergencyInfoCard("Age", user?.age?.toString() ?: "Not set")
-            EmergencyInfoCard("Blood Type", user?.bloodType ?: "Not set")
-            EmergencyInfoCard("Allergies", user?.allergies ?: "Not set")
-            EmergencyInfoCard("Medical Conditions", user?.conditions ?: "Not set")
-            EmergencyInfoCard("Current Medications", user?.medications ?: "Not set")
+            EmergencyInfoCard("Age", currentUser?.age?.toString() ?: "Not set")
+            EmergencyInfoCard("Blood Type", currentUser?.bloodType ?: "Not set")
+            EmergencyInfoCard("Allergies", currentUser?.allergies ?: "Not set")
+            EmergencyInfoCard("Medical Conditions", currentUser?.conditions ?: "Not set")
+            EmergencyInfoCard("Current Medications", currentUser?.medications ?: "Not set")
             EmergencyInfoCard(
                 "Emergency Contact",
-                if (user != null)
-                    "${user.emergencyContactName} (${user.emergencyContactNumber})"
+                if (currentUser != null)
+                    "${currentUser.emergencyContactName} (${currentUser.emergencyContactNumber})"
                 else "Not set"
             )
 

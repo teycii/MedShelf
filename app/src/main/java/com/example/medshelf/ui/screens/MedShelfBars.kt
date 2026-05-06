@@ -1,6 +1,7 @@
 package com.example.medshelf.ui.screens
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -20,7 +21,10 @@ fun MedShelfTopBar(
         navigationIcon = {
             if (showBackButton) {
                 IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back"
+                    )
                 }
             }
         }
@@ -41,7 +45,12 @@ fun MedShelfBottomBar(navController: NavController) {
                     popUpTo("dashboard") { inclusive = false }
                 }
             },
-            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+            icon = {
+                Icon(
+                    Icons.Default.Home,
+                    contentDescription = "Home"
+                )
+            },
             label = { Text("Home") }
         )
 
@@ -52,7 +61,12 @@ fun MedShelfBottomBar(navController: NavController) {
                     launchSingleTop = true
                 }
             },
-            icon = { Icon(Icons.Default.Description, contentDescription = "Documents") },
+            icon = {
+                Icon(
+                    Icons.Default.Description,
+                    contentDescription = "Documents"
+                )
+            },
             label = { Text("Documents") }
         )
 
@@ -63,7 +77,12 @@ fun MedShelfBottomBar(navController: NavController) {
                     launchSingleTop = true
                 }
             },
-            icon = { Icon(Icons.Default.Notifications, contentDescription = "Reminders") },
+            icon = {
+                Icon(
+                    Icons.Default.Notifications,
+                    contentDescription = "Reminders"
+                )
+            },
             label = { Text("Reminders") }
         )
 
@@ -74,7 +93,12 @@ fun MedShelfBottomBar(navController: NavController) {
                     launchSingleTop = true
                 }
             },
-            icon = { Icon(Icons.Default.NoteAlt, contentDescription = "Notes") },
+            icon = {
+                Icon(
+                    Icons.Default.NoteAlt,
+                    contentDescription = "Notes"
+                )
+            },
             label = { Text("Notes") }
         )
 
@@ -85,7 +109,12 @@ fun MedShelfBottomBar(navController: NavController) {
                     launchSingleTop = true
                 }
             },
-            icon = { Icon(Icons.Default.MoreHoriz, contentDescription = "More") },
+            icon = {
+                Icon(
+                    Icons.Default.MoreHoriz,
+                    contentDescription = "More"
+                )
+            },
             label = { Text("More") }
         )
     }

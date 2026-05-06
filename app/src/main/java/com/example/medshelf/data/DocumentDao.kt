@@ -1,19 +1,34 @@
 package com.example.medshelf.data
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.Query
-import com.example.medshelf.model.DocumentEntity // Add this import to fix the unresolved reference
+import androidx.room.*
+import com.example.medshelf.model.DocumentEntity
+import kotlinx.coroutines.flow.Flow
 
-@Dao  // This annotation makes it a Room DAO
+@Dao
 interface DocumentDao {
 
-    @Insert  // Insert method for saving documents
-    suspend fun insert(document: DocumentEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDocument(document: DocumentEntity)
 
-    @Query("SELECT * FROM documents")  // Get all documents from the database
-    suspend fun getAllDocuments(): List<DocumentEntity>
+    @Update
+    suspend fun updateDocument(document: DocumentEntity)
 
-    @Query("SELECT * FROM documents WHERE id = :documentId")  // Get document by its ID
-    suspend fun getDocumentById(documentId: Int): DocumentEntity
+    @Delete
+    suspend fun deleteDocument(document: DocumentEntity)
+
+    @Query("SELECT * FROM documents ORDER BY createdAt DESC")
+    fun getAllDocuments(): Flow<List<DocumentEntity>>
+
+    @Query("SELECT * FROM documents WHERE id = :documentId LIMIT 1")
+    suspend fun getDocumentById(documentId: Int): DocumentEntity?
+
+    @Query("""
+        SELECT * FROM documents 
+        WHERE name LIKE '%' || :query || '%' 
+        OR type LIKE '%' || :query || '%' 
+        OR owner LIKE '%' || :query || '%'
+        OR clinic LIKE '%' || :query || '%'
+        ORDER BY createdAt DESC
+    """)
+    fun searchDocuments(query: String): Flow<List<DocumentEntity>>
 }

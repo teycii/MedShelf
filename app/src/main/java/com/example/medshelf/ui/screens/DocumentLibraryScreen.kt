@@ -34,7 +34,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,12 +55,8 @@ fun DocumentLibraryScreen(
     navController: NavController,
     documentViewModel: DocumentViewModel
 ) {
-    val documents = documentViewModel.documents.value
+    val documents by documentViewModel.documents.collectAsState()
     var selectedFilter by remember { mutableStateOf("All") }
-
-    LaunchedEffect(Unit) {
-        documentViewModel.loadDocuments()
-    }
 
     val categories = listOf(
         CategoryItem("All", Icons.Default.Folder, MaterialTheme.colorScheme.primary),

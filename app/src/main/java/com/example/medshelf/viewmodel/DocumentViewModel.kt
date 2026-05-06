@@ -1,36 +1,64 @@
 package com.example.medshelf.viewmodel
 
 import android.app.Application
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.medshelf.data.AppDatabase
 import com.example.medshelf.model.DocumentEntity
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class DocumentViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val dao = AppDatabase.getDatabase(application).documentDao()
+    private val documentDao =
+        AppDatabase.getDatabase(application).documentDao()
 
-    var documents = mutableStateOf<List<DocumentEntity>>(emptyList())
-        private set
+    val documents: StateFlow<List<DocumentEntity>> =
+        documentDao.getAllDocuments()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = emptyList()
+            )
 
-    fun loadDocuments() {
+    fun addDocument(
+        name: String,
+        type: String,
+        owner: String,
+        date: String,
+        clinic: String,
+        notes: String,
+        fileUri: String
+    ) {
         viewModelScope.launch {
-            documents.value = dao.getAllDocuments()
+
+            val document = DocumentEntity(
+                id = 0,
+                name = name,
+                type = type,
+                owner = owner,
+                date = date,
+                clinic = clinic,
+                notes = notes,
+                fileUri = fileUri,
+                createdAt = System.currentTimeMillis()
+            )
+
+            documentDao.insertDocument(document)
         }
     }
 
-    fun addDocument(name: String, type: String, fileUri: String) {
+    fun loadDocuments() {
+        // intentionally empty
+        // documents StateFlow auto-updates from Room
+    }
+
+    @Suppress("unused")
+    fun deleteDocument(document: DocumentEntity) {
         viewModelScope.launch {
-            dao.insert(
-                DocumentEntity(
-                    name = name,
-                    type = type,
-                    fileUri = fileUri
-                )
-            )
-            loadDocuments()
+            documentDao.deleteDocument(document)
         }
     }
 }

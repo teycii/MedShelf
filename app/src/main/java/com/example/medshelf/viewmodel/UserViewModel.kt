@@ -1,27 +1,26 @@
 package com.example.medshelf.viewmodel
 
-import android.app.Application
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.medshelf.data.AppDatabase
+import com.example.medshelf.data.UserDao
 import com.example.medshelf.model.UserEntity
 import kotlinx.coroutines.launch
 
-class UserViewModel(application: Application) : AndroidViewModel(application) {
+class UserViewModel(
+    private val userDao: UserDao
+) : ViewModel() {
 
-    private val dao = AppDatabase.getDatabase(application).userDao()
-
-    var user = mutableStateOf<UserEntity?>(null)
-        private set
-
-    var isUserLoaded = mutableStateOf(false)
-        private set
+    val user = mutableStateOf<UserEntity?>(null)
+    val isUserLoaded = mutableStateOf(false)
 
     fun loadUser() {
         viewModelScope.launch {
-            user.value = dao.getUser()
-            isUserLoaded.value = true
+            userDao.getUser().collect { savedUser ->
+                user.value = savedUser
+                isUserLoaded.value = true
+            }
         }
     }
 
@@ -50,9 +49,21 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                 emergencyContactNumber = emergencyContactNumber
             )
 
-            dao.saveUser(newUser)
+            userDao.saveUser(newUser)
             user.value = newUser
             isUserLoaded.value = true
         }
+    }
+}
+
+class UserViewModelFactory(
+    private val userDao: UserDao
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(UserViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return UserViewModel(userDao) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -39,10 +38,6 @@ fun DashboardScreen(
     navController: NavController,
     userViewModel: UserViewModel
 ) {
-    LaunchedEffect(Unit) {
-        userViewModel.loadUser()
-    }
-
     val user = userViewModel.user.value
     val firstName = user?.firstName ?: "User"
     val bloodType = user?.bloodType ?: "Not set"
