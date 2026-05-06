@@ -1,7 +1,6 @@
 package com.example.medshelf.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -27,16 +28,21 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+private val MedGreen = Color(0xFF009688)
+private val DarkText = Color(0xFF111827)
+private val SoftText = Color(0xFF64748B)
+private val SoftBorder = Color(0xFFE2E8F0)
+
 data class MedicalNote(
     val id: Int,
     val title: String,
     val content: String,
     val category: String,
-    val dateCreated: String,
+    val noteDate: String,
+    val noteTime: String,
     val isPinned: Boolean = false
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotesScreen(
     navController: NavController
@@ -47,9 +53,10 @@ fun NotesScreen(
                 MedicalNote(
                     id = 1,
                     title = "Allergy Reminder",
-                    content = "Patient is allergic to penicillin.",
+                    content = "Allergic to penicillin.",
                     category = "Allergy",
-                    dateCreated = getCurrentDate(),
+                    noteDate = getCurrentDate(),
+                    noteTime = getCurrentTime(),
                     isPinned = true
                 ),
                 MedicalNote(
@@ -57,7 +64,8 @@ fun NotesScreen(
                     title = "Doctor Instruction",
                     content = "Take medicine after meals only.",
                     category = "Medication",
-                    dateCreated = getCurrentDate()
+                    noteDate = getCurrentDate(),
+                    noteTime = getCurrentTime()
                 )
             )
         )
@@ -71,37 +79,26 @@ fun NotesScreen(
         .filter {
             it.title.contains(searchText, ignoreCase = true) ||
                     it.content.contains(searchText, ignoreCase = true) ||
-                    it.category.contains(searchText, ignoreCase = true)
+                    it.category.contains(searchText, ignoreCase = true) ||
+                    it.noteDate.contains(searchText, ignoreCase = true) ||
+                    it.noteTime.contains(searchText, ignoreCase = true)
         }
         .sortedWith(compareByDescending<MedicalNote> { it.isPinned }.thenByDescending { it.id })
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Medical Notes",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                }
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(
+                containerColor = MedGreen,
                 onClick = {
                     selectedNote = null
                     showDialog = true
                 }
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Note")
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Add Note",
+                    tint = Color.White
+                )
             }
         }
     ) { padding ->
@@ -110,22 +107,37 @@ fun NotesScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(16.dp)
+                .background(Color(0xFFF8FAFC))
+                .padding(18.dp)
         ) {
+            NotesHeader(navController)
+
+            Spacer(modifier = Modifier.height(18.dp))
+
             OutlinedTextField(
                 value = searchText,
                 onValueChange = { searchText = it },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Search notes...") },
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = "Search")
+                    Icon(
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = null,
+                        tint = SoftText
+                    )
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MedGreen,
+                    unfocusedBorderColor = SoftBorder,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    cursorColor = MedGreen
+                )
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             if (filteredNotes.isEmpty()) {
                 EmptyNotesView()
@@ -136,14 +148,17 @@ fun NotesScreen(
                     items(filteredNotes, key = { it.id }) { note ->
                         NoteCard(
                             note = note,
-                            onClick = {
+                            onEditClick = {
                                 selectedNote = note
                                 showDialog = true
                             },
                             onPinClick = {
                                 notes = notes.map {
-                                    if (it.id == note.id) it.copy(isPinned = !it.isPinned)
-                                    else it
+                                    if (it.id == note.id) {
+                                        it.copy(isPinned = !it.isPinned)
+                                    } else {
+                                        it
+                                    }
                                 }
                             },
                             onDeleteClick = {
@@ -162,22 +177,25 @@ fun NotesScreen(
             onDismiss = {
                 showDialog = false
             },
-            onSave = { title, content, category ->
+            onSave = { title, content, category, noteDate, noteTime ->
                 notes = if (selectedNote == null) {
                     notes + MedicalNote(
                         id = (notes.maxOfOrNull { it.id } ?: 0) + 1,
                         title = title,
                         content = content,
                         category = category,
-                        dateCreated = getCurrentDate()
+                        noteDate = noteDate,
+                        noteTime = noteTime
                     )
                 } else {
                     notes.map {
-                        if (it.id == selectedNote!!.id) {
+                        if (it.id == selectedNote?.id) {
                             it.copy(
                                 title = title,
                                 content = content,
-                                category = category
+                                category = category,
+                                noteDate = noteDate,
+                                noteTime = noteTime
                             )
                         } else {
                             it
@@ -192,18 +210,56 @@ fun NotesScreen(
 }
 
 @Composable
-fun NoteCard(
+private fun NotesHeader(navController: NavController) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = { navController.popBackStack() }
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = DarkText
+            )
+        }
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        Column {
+            Text(
+                text = "Medical Notes",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = DarkText
+            )
+
+            Text(
+                text = "Save reminders, instructions, and health details",
+                style = MaterialTheme.typography.bodySmall,
+                color = SoftText
+            )
+        }
+    }
+}
+
+@Composable
+private fun NoteCard(
     note: MedicalNote,
-    onClick: () -> Unit,
+    onEditClick: () -> Unit,
     onPinClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = SoftBorder
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -219,10 +275,10 @@ fun NoteCard(
                     ) {
                         if (note.isPinned) {
                             Icon(
-                                imageVector = Icons.Default.PushPin,
-                                contentDescription = "Pinned",
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                imageVector = Icons.Filled.PushPin,
+                                contentDescription = null,
+                                tint = MedGreen,
+                                modifier = Modifier.size(18.dp)
                             )
 
                             Spacer(modifier = Modifier.width(6.dp))
@@ -231,7 +287,8 @@ fun NoteCard(
                         Text(
                             text = note.title,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = DarkText
                         )
                     }
 
@@ -240,27 +297,32 @@ fun NoteCard(
                     Text(
                         text = note.content,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = SoftText,
                         maxLines = 3
+                    )
+                }
+
+                IconButton(onClick = onEditClick) {
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "Edit Note",
+                        tint = MedGreen
                     )
                 }
 
                 IconButton(onClick = onPinClick) {
                     Icon(
-                        imageVector = Icons.Default.PushPin,
+                        imageVector = Icons.Filled.PushPin,
                         contentDescription = "Pin Note",
-                        tint = if (note.isPinned)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = if (note.isPinned) MedGreen else SoftText
                     )
                 }
 
                 IconButton(onClick = onDeleteClick) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
+                        imageVector = Icons.Filled.Delete,
                         contentDescription = "Delete Note",
-                        tint = MaterialTheme.colorScheme.error
+                        tint = Color(0xFFEF4444)
                     )
                 }
             }
@@ -275,9 +337,9 @@ fun NoteCard(
                 Spacer(modifier = Modifier.weight(1f))
 
                 Text(
-                    text = note.dateCreated,
+                    text = "${note.noteDate} • ${note.noteTime}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = SoftText
                 )
             }
         }
@@ -285,23 +347,23 @@ fun NoteCard(
 }
 
 @Composable
-fun CategoryChip(category: String) {
+private fun CategoryChip(category: String) {
     Surface(
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.primaryContainer
+        color = Color(0xFFE6F7F3)
     ) {
         Text(
             text = category,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            fontWeight = FontWeight.SemiBold
+            color = MedGreen,
+            fontWeight = FontWeight.Bold
         )
     }
 }
 
 @Composable
-fun EmptyNotesView() {
+private fun EmptyNotesView() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -310,10 +372,10 @@ fun EmptyNotesView() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                imageVector = Icons.Default.NoteAlt,
-                contentDescription = "No Notes",
+                imageVector = Icons.Filled.NoteAlt,
+                contentDescription = null,
                 modifier = Modifier.size(70.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MedGreen
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -321,12 +383,13 @@ fun EmptyNotesView() {
             Text(
                 text = "No medical notes yet",
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                color = DarkText
             )
 
             Text(
-                text = "Tap + to add reminders, doctor notes, or allergies.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "Tap + to add reminders, dates, and instructions.",
+                color = SoftText,
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -334,14 +397,16 @@ fun EmptyNotesView() {
 }
 
 @Composable
-fun AddEditNoteDialog(
+private fun AddEditNoteDialog(
     existingNote: MedicalNote?,
     onDismiss: () -> Unit,
-    onSave: (String, String, String) -> Unit
+    onSave: (String, String, String, String, String) -> Unit
 ) {
-    var title by remember { mutableStateOf(existingNote?.title ?: "") }
-    var content by remember { mutableStateOf(existingNote?.content ?: "") }
-    var category by remember { mutableStateOf(existingNote?.category ?: "General") }
+    var title by remember(existingNote) { mutableStateOf(existingNote?.title ?: "") }
+    var content by remember(existingNote) { mutableStateOf(existingNote?.content ?: "") }
+    var category by remember(existingNote) { mutableStateOf(existingNote?.category ?: "General") }
+    var noteDate by remember(existingNote) { mutableStateOf(existingNote?.noteDate ?: getCurrentDate()) }
+    var noteTime by remember(existingNote) { mutableStateOf(existingNote?.noteTime ?: getCurrentTime()) }
 
     val categories = listOf(
         "General",
@@ -357,7 +422,8 @@ fun AddEditNoteDialog(
         title = {
             Text(
                 text = if (existingNote == null) "Add Medical Note" else "Edit Medical Note",
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = DarkText
             )
         },
         text = {
@@ -367,7 +433,8 @@ fun AddEditNoteDialog(
                     onValueChange = { title = it },
                     label = { Text("Note Title") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(13.dp)
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -379,15 +446,41 @@ fun AddEditNoteDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp),
-                    maxLines = 5
+                    maxLines = 5,
+                    shape = RoundedCornerShape(13.dp)
                 )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = noteDate,
+                        onValueChange = { noteDate = it },
+                        label = { Text("Date") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = RoundedCornerShape(13.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = noteTime,
+                        onValueChange = { noteTime = it },
+                        label = { Text("Time") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = RoundedCornerShape(13.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
                     text = "Category",
                     fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = DarkText
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -409,10 +502,24 @@ fun AddEditNoteDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (title.isNotBlank() && content.isNotBlank()) {
-                        onSave(title.trim(), content.trim(), category)
+                    if (
+                        title.isNotBlank() &&
+                        content.isNotBlank() &&
+                        noteDate.isNotBlank() &&
+                        noteTime.isNotBlank()
+                    ) {
+                        onSave(
+                            title.trim(),
+                            content.trim(),
+                            category,
+                            noteDate.trim(),
+                            noteTime.trim()
+                        )
                     }
-                }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MedGreen
+                )
             ) {
                 Text("Save")
             }
@@ -425,7 +532,12 @@ fun AddEditNoteDialog(
     )
 }
 
-fun getCurrentDate(): String {
+private fun getCurrentDate(): String {
     val formatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    return formatter.format(Date())
+}
+
+private fun getCurrentTime(): String {
+    val formatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
     return formatter.format(Date())
 }
