@@ -57,13 +57,25 @@ fun AddDocumentScreen(
     var ownerExpanded by remember { mutableStateOf(false) }
 
     val documentTypes = listOf(
-        "Lab Result",
+        "Laboratory Result",
         "Prescription",
         "Medical Certificate",
         "X-Ray / Imaging",
         "Vaccination Record",
-        "Insurance",
         "Discharge Summary",
+        "Hospital Bill",
+        "Insurance Document",
+        "Doctor's Note",
+        "Medical Clearance",
+        "Ultrasound Result",
+        "ECG / Heart Test",
+        "Dental Record",
+        "Eye Checkup Record",
+        "Surgery Record",
+        "Maintenance Medication",
+        "Allergy Record",
+        "Emergency Document",
+        "Family Member Record",
         "Other"
     )
 
