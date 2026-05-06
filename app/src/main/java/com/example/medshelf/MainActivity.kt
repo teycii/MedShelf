@@ -118,7 +118,7 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("reminders") {
-            Text("Reminders Screen")
+            RemindersScreen(navController)
         }
 
         composable("notes") {
