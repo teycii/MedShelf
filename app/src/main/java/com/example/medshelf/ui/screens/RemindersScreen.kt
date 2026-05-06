@@ -1,7 +1,6 @@
 package com.example.medshelf.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -43,48 +42,26 @@ data class ReminderItem(
 
 @Composable
 fun RemindersScreen(navController: NavController) {
-    var showAddDialog by remember { mutableStateOf(false) }
+    val showAddDialog = remember { mutableStateOf(false) }
 
     val reminders = remember {
         mutableStateListOf(
-            ReminderItem(
-                title = "Take Vitamin D",
-                time = "Today, 8:00 AM",
-                profile = "Main profile",
-                note = "After breakfast",
-                status = "Due soon"
-            ),
-            ReminderItem(
-                title = "Blood pressure check",
-                time = "Today, 6:00 PM",
-                profile = "Family member",
-                note = "Record reading in Health Notes",
-                status = "Upcoming"
-            ),
-            ReminderItem(
-                title = "Doctor follow-up",
-                time = "Tomorrow, 10:30 AM",
-                profile = "Main profile",
-                note = "Bring latest lab result",
-                status = "Scheduled"
-            )
+            ReminderItem("Take Vitamin D", "Today, 8:00 AM", "Main profile", "After breakfast", "Due soon"),
+            ReminderItem("Blood pressure check", "Today, 6:00 PM", "Family member", "Record reading in Health Notes", "Upcoming"),
+            ReminderItem("Doctor follow-up", "Tomorrow, 10:30 AM", "Main profile", "Bring latest lab result", "Scheduled")
         )
     }
 
     Scaffold(
         topBar = {
-            MedShelfTopBar(
-                title = "Reminders",
-                navController = navController,
-                showBackButton = true
-            )
+            MedShelfTopBar("Reminders", navController, true)
         },
         bottomBar = {
             MedShelfBottomBar(navController)
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddDialog = true },
+                onClick = { showAddDialog.value = true },
                 containerColor = MedGreen,
                 contentColor = Color.White
             ) {
@@ -99,11 +76,7 @@ fun RemindersScreen(navController: NavController) {
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(
-                            Color.White,
-                            Color(0xFFF9FFFC),
-                            Color(0xFFEFFFF8)
-                        )
+                        listOf(Color.White, Color(0xFFF9FFFC), Color(0xFFEFFFF8))
                     )
                 )
                 .padding(paddingValues),
@@ -116,9 +89,7 @@ fun RemindersScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                ReminderHeader(
-                    count = reminders.size
-                )
+                ReminderHeader(count = reminders.size)
             }
 
             item {
@@ -140,9 +111,11 @@ fun RemindersScreen(navController: NavController) {
         }
     }
 
-    if (showAddDialog) {
+    if (showAddDialog.value) {
         AddReminderDialog(
-            onDismiss = { showAddDialog = false },
+            onDismiss = {
+                showAddDialog.value = false
+            },
             onSave = { title, time, profile, note ->
                 reminders.add(
                     ReminderItem(
@@ -153,7 +126,7 @@ fun RemindersScreen(navController: NavController) {
                         status = "Scheduled"
                     )
                 )
-                showAddDialog = false
+                showAddDialog.value = false
             }
         )
     }
@@ -184,9 +157,7 @@ private fun TodayReminderCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFEAFBF7)
-        ),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFEAFBF7)),
         elevation = CardDefaults.cardElevation(2.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD6F5EF))
     ) {
@@ -251,9 +222,7 @@ private fun TodayReminderCard() {
 @Composable
 private fun ReminderCard(reminder: ReminderItem) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { },
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp),
@@ -279,17 +248,11 @@ private fun ReminderCard(reminder: ReminderItem) {
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                InfoLine(
-                    icon = Icons.Filled.AccessTime,
-                    text = reminder.time
-                )
+                InfoLine(Icons.Filled.AccessTime, reminder.time)
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                InfoLine(
-                    icon = Icons.Filled.Person,
-                    text = reminder.profile
-                )
+                InfoLine(Icons.Filled.Person, reminder.profile)
 
                 if (reminder.note.isNotBlank()) {
                     Spacer(modifier = Modifier.height(5.dp))
@@ -398,7 +361,6 @@ private fun AddReminderDialog(
     var time by remember { mutableStateOf("") }
     var profile by remember { mutableStateOf("Main profile") }
     var note by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -412,10 +374,7 @@ private fun AddReminderDialog(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = title,
-                    onValueChange = {
-                        title = it
-                        error = ""
-                    },
+                    onValueChange = { title = it },
                     label = { Text("Reminder Title") },
                     placeholder = { Text("e.g., Take medicine") },
                     singleLine = true,
@@ -424,10 +383,7 @@ private fun AddReminderDialog(
 
                 OutlinedTextField(
                     value = time,
-                    onValueChange = {
-                        time = it
-                        error = ""
-                    },
+                    onValueChange = { time = it },
                     label = { Text("Time") },
                     placeholder = { Text("e.g., Today, 8:00 PM") },
                     singleLine = true,
@@ -450,23 +406,13 @@ private fun AddReminderDialog(
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                if (error.isNotBlank()) {
-                    Text(
-                        text = error,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    when {
-                        title.isBlank() -> error = "Please enter a reminder title."
-                        time.isBlank() -> error = "Please enter a reminder time."
-                        else -> onSave(
+                    if (title.isNotBlank() && time.isNotBlank()) {
+                        onSave(
                             title.trim(),
                             time.trim(),
                             profile.trim().ifBlank { "Main profile" },
