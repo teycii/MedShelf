@@ -15,7 +15,7 @@ fun EditProfileScreen(
     navController: NavController,
     userViewModel: UserViewModel
 ) {
-    val user by userViewModel.user.collectAsState()
+    val user = userViewModel.user.value
 
     var firstName by remember(user) { mutableStateOf(user?.firstName ?: "") }
     var lastName by remember(user) { mutableStateOf(user?.lastName ?: "") }
