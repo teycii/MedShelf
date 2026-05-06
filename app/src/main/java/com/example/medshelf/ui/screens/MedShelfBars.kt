@@ -2,8 +2,18 @@ package com.example.medshelf.ui.screens
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NoteAlt
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.navigation.NavController
@@ -17,12 +27,18 @@ fun MedShelfTopBar(
     showBackButton: Boolean = true
 ) {
     TopAppBar(
-        title = { Text(title) },
+        title = {
+            Text(text = title)
+        },
         navigationIcon = {
             if (showBackButton) {
-                IconButton(onClick = { navController.popBackStack() }) {
+                IconButton(
+                    onClick = {
+                        navController.popBackStack()
+                    }
+                ) {
                     Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back"
                     )
                 }
@@ -42,16 +58,22 @@ fun MedShelfBottomBar(navController: NavController) {
             onClick = {
                 navController.navigate("dashboard") {
                     launchSingleTop = true
-                    popUpTo("dashboard") { inclusive = false }
+                    restoreState = true
+                    popUpTo("dashboard") {
+                        inclusive = false
+                        saveState = true
+                    }
                 }
             },
             icon = {
                 Icon(
-                    Icons.Default.Home,
+                    imageVector = Icons.Filled.Home,
                     contentDescription = "Home"
                 )
             },
-            label = { Text("Home") }
+            label = {
+                Text("Home")
+            }
         )
 
         NavigationBarItem(
@@ -59,15 +81,18 @@ fun MedShelfBottomBar(navController: NavController) {
             onClick = {
                 navController.navigate("document_library") {
                     launchSingleTop = true
+                    restoreState = true
                 }
             },
             icon = {
                 Icon(
-                    Icons.Default.Description,
+                    imageVector = Icons.Filled.Description,
                     contentDescription = "Documents"
                 )
             },
-            label = { Text("Documents") }
+            label = {
+                Text("Documents")
+            }
         )
 
         NavigationBarItem(
@@ -75,15 +100,18 @@ fun MedShelfBottomBar(navController: NavController) {
             onClick = {
                 navController.navigate("reminders") {
                     launchSingleTop = true
+                    restoreState = true
                 }
             },
             icon = {
                 Icon(
-                    Icons.Default.Notifications,
+                    imageVector = Icons.Filled.Notifications,
                     contentDescription = "Reminders"
                 )
             },
-            label = { Text("Reminders") }
+            label = {
+                Text("Reminders")
+            }
         )
 
         NavigationBarItem(
@@ -91,15 +119,18 @@ fun MedShelfBottomBar(navController: NavController) {
             onClick = {
                 navController.navigate("notes") {
                     launchSingleTop = true
+                    restoreState = true
                 }
             },
             icon = {
                 Icon(
-                    Icons.Default.NoteAlt,
+                    imageVector = Icons.Filled.NoteAlt,
                     contentDescription = "Notes"
                 )
             },
-            label = { Text("Notes") }
+            label = {
+                Text("Notes")
+            }
         )
 
         NavigationBarItem(
@@ -107,15 +138,18 @@ fun MedShelfBottomBar(navController: NavController) {
             onClick = {
                 navController.navigate("more") {
                     launchSingleTop = true
+                    restoreState = true
                 }
             },
             icon = {
                 Icon(
-                    Icons.Default.MoreHoriz,
+                    imageVector = Icons.Filled.MoreHoriz,
                     contentDescription = "More"
                 )
             },
-            label = { Text("More") }
+            label = {
+                Text("More")
+            }
         )
     }
 }
