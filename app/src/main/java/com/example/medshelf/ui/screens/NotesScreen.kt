@@ -2,19 +2,24 @@ package com.example.medshelf.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.NoteAlt
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -137,11 +142,8 @@ fun NotesScreen(
                             },
                             onPinClick = {
                                 notes = notes.map {
-                                    if (it.id == note.id) {
-                                        it.copy(isPinned = !it.isPinned)
-                                    } else {
-                                        it
-                                    }
+                                    if (it.id == note.id) it.copy(isPinned = !it.isPinned)
+                                    else it
                                 }
                             },
                             onDeleteClick = {
@@ -159,20 +161,18 @@ fun NotesScreen(
             existingNote = selectedNote,
             onDismiss = {
                 showDialog = false
-                selectedNote = null
             },
             onSave = { title, content, category ->
-                if (selectedNote == null) {
-                    val newNote = MedicalNote(
+                notes = if (selectedNote == null) {
+                    notes + MedicalNote(
                         id = (notes.maxOfOrNull { it.id } ?: 0) + 1,
                         title = title,
                         content = content,
                         category = category,
                         dateCreated = getCurrentDate()
                     )
-                    notes = notes + newNote
                 } else {
-                    notes = notes.map {
+                    notes.map {
                         if (it.id == selectedNote!!.id) {
                             it.copy(
                                 title = title,
@@ -186,7 +186,6 @@ fun NotesScreen(
                 }
 
                 showDialog = false
-                selectedNote = null
             }
         )
     }
@@ -353,8 +352,6 @@ fun AddEditNoteDialog(
         "Lab Result"
     )
 
-    var expanded by remember { mutableStateOf(false) }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -385,38 +382,26 @@ fun AddEditNoteDialog(
                     maxLines = 5
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
+                Text(
+                    text = "Category",
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedTextField(
-                        value = category,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Category") },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                        },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth()
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        categories.forEach { item ->
-                            DropdownMenuItem(
-                                text = { Text(item) },
-                                onClick = {
-                                    category = item
-                                    expanded = false
-                                }
-                            )
-                        }
+                    categories.forEach { item ->
+                        FilterChip(
+                            selected = category == item,
+                            onClick = { category = item },
+                            label = { Text(item) }
+                        )
                     }
                 }
             }

@@ -59,15 +59,19 @@ fun MedShelfApp(database: AppDatabase) {
             val isLoaded = userViewModel.isUserLoaded.value
             val user = userViewModel.user.value
 
-            LaunchedEffect(isLoaded) {
+            LaunchedEffect(isLoaded, user) {
                 if (isLoaded) {
                     if (user == null) {
                         navController.navigate("registration") {
-                            popUpTo("loading") { inclusive = true }
+                            popUpTo("loading") {
+                                inclusive = true
+                            }
                         }
                     } else {
                         navController.navigate("dashboard") {
-                            popUpTo("loading") { inclusive = true }
+                            popUpTo("loading") {
+                                inclusive = true
+                            }
                         }
                     }
                 }
@@ -82,27 +86,45 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("registration") {
-            RegistrationScreen(navController, userViewModel)
+            RegistrationScreen(
+                navController = navController,
+                userViewModel = userViewModel
+            )
         }
 
         composable("dashboard") {
-            DashboardScreen(navController, userViewModel)
+            DashboardScreen(
+                navController = navController,
+                userViewModel = userViewModel
+            )
         }
 
         composable("document_library") {
-            DocumentLibraryScreen(navController, documentViewModel)
+            DocumentLibraryScreen(
+                navController = navController,
+                documentViewModel = documentViewModel
+            )
         }
 
         composable("add_document") {
-            AddDocumentScreen(navController, documentViewModel)
+            AddDocumentScreen(
+                navController = navController,
+                documentViewModel = documentViewModel
+            )
         }
 
         composable("emergency_snapshot") {
-            EmergencySnapshotScreen(navController, userViewModel)
+            EmergencySnapshotScreen(
+                navController = navController,
+                userViewModel = userViewModel
+            )
         }
 
         composable("edit_profile") {
-            EditProfileScreen(navController, userViewModel)
+            EditProfileScreen(
+                navController = navController,
+                userViewModel = userViewModel
+            )
         }
 
         composable("document_details/{documentId}") { backStackEntry ->
@@ -118,11 +140,15 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("reminders") {
-            RemindersScreen(navController)
+            RemindersScreen(
+                navController = navController
+            )
         }
 
         composable("notes") {
-            Text("Notes Screen")
+            NotesScreen(
+                navController = navController
+            )
         }
 
         composable("more") {

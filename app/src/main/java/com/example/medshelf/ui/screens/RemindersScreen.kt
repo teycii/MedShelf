@@ -1,7 +1,6 @@
 package com.example.medshelf.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,6 +10,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.MoreVert
@@ -42,6 +44,7 @@ private val Orange = Color(0xFFF59E0B)
 private val ErrorRed = Color(0xFFEF4444)
 
 data class ReminderItem(
+    val id: Long,
     val title: String,
     val date: String,
     val time: String,
@@ -51,30 +54,74 @@ data class ReminderItem(
     val status: String
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
-
 @Composable
 fun RemindersScreen(navController: NavController) {
-    val showAddDialog = remember { mutableStateOf(false) }
+    val showReminderDialog = remember { mutableStateOf(false) }
+    val editingReminder = remember { mutableStateOf<ReminderItem?>(null) }
+    val reminderToDelete = remember { mutableStateOf<ReminderItem?>(null) }
 
     val reminders = remember {
         mutableStateListOf(
-            ReminderItem("Take Vitamin D", "Today", "8:00 AM", "Main profile", "After breakfast", "Daily", "Due soon"),
-            ReminderItem("Blood pressure check", "Today", "6:00 PM", "Family member", "Record reading in Health Notes", "Once", "Upcoming"),
-            ReminderItem("Doctor follow-up", "Tomorrow", "10:30 AM", "Main profile", "Bring latest lab result", "Once", "Scheduled")
+            ReminderItem(
+                id = 1L,
+                title = "Take Vitamin D",
+                date = "Today",
+                time = "8:00 AM",
+                profile = "Main profile",
+                note = "After breakfast",
+                repeat = "Daily",
+                status = "Due soon"
+            ),
+            ReminderItem(
+                id = 2L,
+                title = "Blood pressure check",
+                date = "Today",
+                time = "6:00 PM",
+                profile = "Family member",
+                note = "Record reading in Health Notes",
+                repeat = "Once",
+                status = "Upcoming"
+            ),
+            ReminderItem(
+                id = 3L,
+                title = "Doctor follow-up",
+                date = "Tomorrow",
+                time = "10:30 AM",
+                profile = "Main profile",
+                note = "Bring latest lab result",
+                repeat = "Once",
+                status = "Scheduled"
+            )
         )
     }
 
+    val activeReminders = reminders.filter { it.status != "Completed" }
+    val nextReminder = activeReminders.firstOrNull()
+
     Scaffold(
-        topBar = { MedShelfTopBar("Reminders", navController, true) },
-        bottomBar = { MedShelfBottomBar(navController) },
+        topBar = {
+            MedShelfTopBar(
+                title = "Reminders",
+                navController = navController,
+                showBackButton = true
+            )
+        },
+        bottomBar = {
+            MedShelfBottomBar(navController)
+        },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddDialog.value = true },
+                onClick = {
+                    editingReminder.value = null
+                    showReminderDialog.value = true
+                },
                 containerColor = MedGreen,
                 contentColor = Color.White
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add Reminder")
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Add Reminder"
+                )
             }
         },
         containerColor = Color.Transparent
@@ -85,7 +132,11 @@ fun RemindersScreen(navController: NavController) {
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color.White, Color(0xFFF9FFFC), Color(0xFFEFFFF8))
+                        listOf(
+                            Color.White,
+                            Color(0xFFF9FFFC),
+                            Color(0xFFEFFFF8)
+                        )
                     )
                 )
                 .padding(paddingValues),
@@ -97,8 +148,13 @@ fun RemindersScreen(navController: NavController) {
             ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            item { ReminderHeader(count = reminders.size) }
-            item { NextReminderCard(reminder = reminders.firstOrNull()) }
+            item {
+                ReminderHeader(count = activeReminders.size)
+            }
+
+            item {
+                NextReminderCard(reminder = nextReminder)
+            }
 
             item {
                 Text(
@@ -109,28 +165,94 @@ fun RemindersScreen(navController: NavController) {
                 )
             }
 
-            items(reminders) { reminder ->
-                ReminderCard(reminder = reminder)
+            items(
+                items = reminders,
+                key = { it.id }
+            ) { reminder ->
+                ReminderCard(
+                    reminder = reminder,
+                    onEdit = {
+                        editingReminder.value = reminder
+                        showReminderDialog.value = true
+                    },
+                    onDelete = {
+                        reminderToDelete.value = reminder
+                    },
+                    onComplete = {
+                        val index = reminders.indexOfFirst { it.id == reminder.id }
+                        if (index != -1) {
+                            reminders[index] = reminder.copy(status = "Completed")
+                        }
+                    }
+                )
             }
         }
     }
 
-    if (showAddDialog.value) {
-        AddReminderDialog(
-            onDismiss = { showAddDialog.value = false },
-            onSave = { title, date, time, profile, note, repeat ->
-                reminders.add(
-                    ReminderItem(
-                        title = title,
-                        date = date,
-                        time = time,
-                        profile = profile,
-                        note = note,
-                        repeat = repeat,
-                        status = "Scheduled"
+    if (showReminderDialog.value) {
+        AddEditReminderDialog(
+            existingReminder = editingReminder.value,
+            onDismiss = {
+                showReminderDialog.value = false
+                editingReminder.value = null
+            },
+            onSave = { savedReminder ->
+                val editing = editingReminder.value
+
+                if (editing == null) {
+                    reminders.add(
+                        savedReminder.copy(
+                            id = System.currentTimeMillis()
+                        )
                     )
+                } else {
+                    val index = reminders.indexOfFirst { it.id == editing.id }
+                    if (index != -1) {
+                        reminders[index] = savedReminder.copy(id = editing.id)
+                    }
+                }
+
+                showReminderDialog.value = false
+                editingReminder.value = null
+            }
+        )
+    }
+
+    reminderToDelete.value?.let { reminder ->
+        AlertDialog(
+            onDismissRequest = {
+                reminderToDelete.value = null
+            },
+            title = {
+                Text(
+                    text = "Delete Reminder",
+                    fontWeight = FontWeight.Bold
                 )
-                showAddDialog.value = false
+            },
+            text = {
+                Text("Are you sure you want to delete ${reminder.title}?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        reminders.remove(reminder)
+                        reminderToDelete.value = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ErrorRed
+                    )
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        reminderToDelete.value = null
+                    }
+                ) {
+                    Text("Cancel")
+                }
             }
         )
     }
@@ -203,7 +325,8 @@ private fun NextReminderCard(reminder: ReminderItem?) {
                 )
 
                 Text(
-                    text = reminder?.let { "${it.date}, ${it.time} • ${it.profile}" } ?: "Add your first reminder",
+                    text = reminder?.let { "${it.date}, ${it.time} • ${it.profile}" }
+                        ?: "Add your first reminder",
                     style = MaterialTheme.typography.bodySmall,
                     color = SoftText,
                     maxLines = 1,
@@ -228,7 +351,14 @@ private fun NextReminderCard(reminder: ReminderItem?) {
 }
 
 @Composable
-private fun ReminderCard(reminder: ReminderItem) {
+private fun ReminderCard(
+    reminder: ReminderItem,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onComplete: () -> Unit
+) {
+    val menuExpanded = remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
@@ -299,13 +429,68 @@ private fun ReminderCard(reminder: ReminderItem) {
                     style = MaterialTheme.typography.labelSmall
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Box {
+                    IconButton(
+                        onClick = {
+                            menuExpanded.value = true
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "More",
+                            tint = SoftText
+                        )
+                    }
 
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = "More",
-                    tint = SoftText
-                )
+                    DropdownMenu(
+                        expanded = menuExpanded.value,
+                        onDismissRequest = {
+                            menuExpanded.value = false
+                        }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Edit") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Filled.Edit,
+                                    contentDescription = null
+                                )
+                            },
+                            onClick = {
+                                menuExpanded.value = false
+                                onEdit()
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Mark Complete") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Filled.CheckCircle,
+                                    contentDescription = null
+                                )
+                            },
+                            onClick = {
+                                menuExpanded.value = false
+                                onComplete()
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Delete") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Filled.Delete,
+                                    contentDescription = null
+                                )
+                            },
+                            onClick = {
+                                menuExpanded.value = false
+                                onDelete()
+                            }
+                        )
+                    }
+                }
             }
         }
     }
@@ -316,7 +501,14 @@ private fun ReminderIcon(status: String) {
     val color = when (status) {
         "Due soon" -> Purple
         "Upcoming" -> Orange
+        "Completed" -> MedGreen
         else -> MedGreen
+    }
+
+    val icon = if (status == "Completed") {
+        Icons.Filled.CheckCircle
+    } else {
+        Icons.Filled.Medication
     }
 
     Box(
@@ -326,7 +518,7 @@ private fun ReminderIcon(status: String) {
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = Icons.Filled.Medication,
+            imageVector = icon,
             contentDescription = null,
             tint = color,
             modifier = Modifier.size(28.dp)
@@ -364,6 +556,7 @@ private fun StatusChip(status: String) {
     val color = when (status) {
         "Due soon" -> Purple
         "Upcoming" -> Orange
+        "Completed" -> MedGreen
         else -> MedGreen
     }
 
@@ -383,17 +576,35 @@ private fun StatusChip(status: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddReminderDialog(
+private fun AddEditReminderDialog(
+    existingReminder: ReminderItem?,
     onDismiss: () -> Unit,
-    onSave: (String, String, String, String, String, String) -> Unit
+    onSave: (ReminderItem) -> Unit
 ) {
+    val title = remember(existingReminder?.id) {
+        mutableStateOf(existingReminder?.title ?: "")
+    }
 
-    val title = remember { mutableStateOf("") }
-    val selectedDate = remember { mutableStateOf("") }
-    val selectedTime = remember { mutableStateOf("") }
-    val profile = remember { mutableStateOf("Main profile") }
-    val note = remember { mutableStateOf("") }
-    val repeat = remember { mutableStateOf("Once") }
+    val selectedDate = remember(existingReminder?.id) {
+        mutableStateOf(existingReminder?.date ?: "")
+    }
+
+    val selectedTime = remember(existingReminder?.id) {
+        mutableStateOf(existingReminder?.time ?: "")
+    }
+
+    val profile = remember(existingReminder?.id) {
+        mutableStateOf(existingReminder?.profile ?: "Main profile")
+    }
+
+    val note = remember(existingReminder?.id) {
+        mutableStateOf(existingReminder?.note ?: "")
+    }
+
+    val repeat = remember(existingReminder?.id) {
+        mutableStateOf(existingReminder?.repeat ?: "Once")
+    }
+
     val error = remember { mutableStateOf("") }
 
     val showDatePicker = remember { mutableStateOf(false) }
@@ -414,36 +625,21 @@ private fun AddReminderDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-
         title = {
             Text(
-                text = "Add Reminder",
+                text = if (existingReminder == null) "Add Reminder" else "Edit Reminder",
                 fontWeight = FontWeight.Bold
             )
         },
-
         text = {
-
-            Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = title.value,
-                    onValueChange = {
-                        title.value = it
-                    },
-                    label = {
-                        Text("Reminder Title")
-                    },
-                    placeholder = {
-                        Text("e.g., Take medicine")
-                    },
+                    onValueChange = { title.value = it },
+                    label = { Text("Reminder Title") },
+                    placeholder = { Text("e.g., Take medicine") },
                     leadingIcon = {
-                        Icon(
-                            Icons.Filled.Medication,
-                            contentDescription = null
-                        )
+                        Icon(Icons.Filled.Medication, contentDescription = null)
                     },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -453,59 +649,49 @@ private fun AddReminderDialog(
                     value = selectedDate.value,
                     onValueChange = {},
                     readOnly = true,
-                    label = {
-                        Text("Date")
-                    },
-                    placeholder = {
-                        Text("Select date")
-                    },
+                    label = { Text("Date") },
+                    placeholder = { Text("Select date") },
                     leadingIcon = {
-                        Icon(
-                            Icons.Filled.Event,
-                            contentDescription = null
-                        )
+                        Icon(Icons.Filled.Event, contentDescription = null)
                     },
                     trailingIcon = {
-                        Icon(
-                            Icons.Filled.CalendarMonth,
-                            contentDescription = null
-                        )
+                        Icon(Icons.Filled.CalendarMonth, contentDescription = null)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
-                            showDatePicker.value = true
-                        }
+                        .padding(0.dp)
                 )
+
+                TextButton(
+                    onClick = {
+                        showDatePicker.value = true
+                    }
+                ) {
+                    Text("Choose Date")
+                }
 
                 OutlinedTextField(
                     value = selectedTime.value,
                     onValueChange = {},
                     readOnly = true,
-                    label = {
-                        Text("Time")
-                    },
-                    placeholder = {
-                        Text("Select time")
-                    },
+                    label = { Text("Time") },
+                    placeholder = { Text("Select time") },
                     leadingIcon = {
-                        Icon(
-                            Icons.Filled.Schedule,
-                            contentDescription = null
-                        )
+                        Icon(Icons.Filled.Schedule, contentDescription = null)
                     },
                     trailingIcon = {
-                        Icon(
-                            Icons.Filled.AccessTime,
-                            contentDescription = null
-                        )
+                        Icon(Icons.Filled.AccessTime, contentDescription = null)
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            showTimePicker.value = true
-                        }
+                    modifier = Modifier.fillMaxWidth()
                 )
+
+                TextButton(
+                    onClick = {
+                        showTimePicker.value = true
+                    }
+                ) {
+                    Text("Choose Time")
+                }
 
                 ExposedDropdownMenuBox(
                     expanded = profileExpanded.value,
@@ -513,19 +699,13 @@ private fun AddReminderDialog(
                         profileExpanded.value = !profileExpanded.value
                     }
                 ) {
-
                     OutlinedTextField(
                         value = profile.value,
                         onValueChange = {},
                         readOnly = true,
-                        label = {
-                            Text("Profile")
-                        },
+                        label = { Text("Profile") },
                         leadingIcon = {
-                            Icon(
-                                Icons.Filled.Person,
-                                contentDescription = null
-                            )
+                            Icon(Icons.Filled.Person, contentDescription = null)
                         },
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(
@@ -546,13 +726,9 @@ private fun AddReminderDialog(
                             profileExpanded.value = false
                         }
                     ) {
-
                         profiles.forEach { item ->
-
                             DropdownMenuItem(
-                                text = {
-                                    Text(item)
-                                },
+                                text = { Text(item) },
                                 onClick = {
                                     profile.value = item
                                     profileExpanded.value = false
@@ -568,19 +744,13 @@ private fun AddReminderDialog(
                         repeatExpanded.value = !repeatExpanded.value
                     }
                 ) {
-
                     OutlinedTextField(
                         value = repeat.value,
                         onValueChange = {},
                         readOnly = true,
-                        label = {
-                            Text("Repeat")
-                        },
+                        label = { Text("Repeat") },
                         leadingIcon = {
-                            Icon(
-                                Icons.Filled.Notifications,
-                                contentDescription = null
-                            )
+                            Icon(Icons.Filled.Notifications, contentDescription = null)
                         },
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(
@@ -601,13 +771,9 @@ private fun AddReminderDialog(
                             repeatExpanded.value = false
                         }
                     ) {
-
                         repeatOptions.forEach { item ->
-
                             DropdownMenuItem(
-                                text = {
-                                    Text(item)
-                                },
+                                text = { Text(item) },
                                 onClick = {
                                     repeat.value = item
                                     repeatExpanded.value = false
@@ -619,27 +785,17 @@ private fun AddReminderDialog(
 
                 OutlinedTextField(
                     value = note.value,
-                    onValueChange = {
-                        note.value = it
-                    },
-                    label = {
-                        Text("Notes")
-                    },
-                    placeholder = {
-                        Text("Optional instructions")
-                    },
+                    onValueChange = { note.value = it },
+                    label = { Text("Notes") },
+                    placeholder = { Text("Optional instructions") },
                     leadingIcon = {
-                        Icon(
-                            Icons.Filled.NoteAlt,
-                            contentDescription = null
-                        )
+                        Icon(Icons.Filled.NoteAlt, contentDescription = null)
                     },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 if (error.value.isNotBlank()) {
-
                     Text(
                         text = error.value,
                         color = ErrorRed,
@@ -648,38 +804,34 @@ private fun AddReminderDialog(
                 }
             }
         },
-
         confirmButton = {
-
             Button(
                 onClick = {
-
                     when {
-
                         title.value.isBlank() -> {
-                            error.value =
-                                "Please enter a reminder title."
+                            error.value = "Please enter a reminder title."
                         }
 
                         selectedDate.value.isBlank() -> {
-                            error.value =
-                                "Please select a date."
+                            error.value = "Please select a date."
                         }
 
                         selectedTime.value.isBlank() -> {
-                            error.value =
-                                "Please select a time."
+                            error.value = "Please select a time."
                         }
 
                         else -> {
-
                             onSave(
-                                title.value.trim(),
-                                selectedDate.value,
-                                selectedTime.value,
-                                profile.value,
-                                note.value.trim(),
-                                repeat.value
+                                ReminderItem(
+                                    id = existingReminder?.id ?: 0L,
+                                    title = title.value.trim(),
+                                    date = selectedDate.value,
+                                    time = selectedTime.value,
+                                    profile = profile.value,
+                                    note = note.value.trim(),
+                                    repeat = repeat.value,
+                                    status = existingReminder?.status ?: "Scheduled"
+                                )
                             )
                         }
                     }
@@ -691,9 +843,7 @@ private fun AddReminderDialog(
                 Text("Save")
             }
         },
-
         dismissButton = {
-
             TextButton(
                 onClick = onDismiss
             ) {
@@ -703,23 +853,17 @@ private fun AddReminderDialog(
     )
 
     if (showDatePicker.value) {
-
         DatePickerDialog(
             onDismissRequest = {
                 showDatePicker.value = false
             },
-
             confirmButton = {
-
                 TextButton(
                     onClick = {
-
-                        val millis =
-                            datePickerState.selectedDateMillis
+                        val millis = datePickerState.selectedDateMillis
 
                         if (millis != null) {
-                            selectedDate.value =
-                                formatDate(millis)
+                            selectedDate.value = formatDate(millis)
                         }
 
                         showDatePicker.value = false
@@ -728,9 +872,7 @@ private fun AddReminderDialog(
                     Text("OK")
                 }
             },
-
             dismissButton = {
-
                 TextButton(
                     onClick = {
                         showDatePicker.value = false
@@ -739,49 +881,37 @@ private fun AddReminderDialog(
                     Text("Cancel")
                 }
             }
-
         ) {
             DatePicker(state = datePickerState)
         }
     }
 
     if (showTimePicker.value) {
-
         AlertDialog(
             onDismissRequest = {
                 showTimePicker.value = false
             },
-
             title = {
                 Text(
                     text = "Select Time",
                     fontWeight = FontWeight.Bold
                 )
             },
-
             text = {
-
                 Box(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-
-                    TimePicker(
-                        state = timePickerState
-                    )
+                    TimePicker(state = timePickerState)
                 }
             },
-
             confirmButton = {
-
                 TextButton(
                     onClick = {
-
-                        selectedTime.value =
-                            formatTime(
-                                hour = timePickerState.hour,
-                                minute = timePickerState.minute
-                            )
+                        selectedTime.value = formatTime(
+                            hour = timePickerState.hour,
+                            minute = timePickerState.minute
+                        )
 
                         showTimePicker.value = false
                     }
@@ -789,9 +919,7 @@ private fun AddReminderDialog(
                     Text("OK")
                 }
             },
-
             dismissButton = {
-
                 TextButton(
                     onClick = {
                         showTimePicker.value = false
@@ -811,6 +939,7 @@ private fun formatDate(millis: Long): String {
 
 private fun formatTime(hour: Int, minute: Int): String {
     val amPm = if (hour >= 12) "PM" else "AM"
+
     val displayHour = when {
         hour == 0 -> 12
         hour > 12 -> hour - 12
