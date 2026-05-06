@@ -105,8 +105,16 @@ fun MedShelfApp(database: AppDatabase) {
             EditProfileScreen(navController, userViewModel)
         }
 
-        composable("document_details") {
-            DocumentDetailsScreen(navController)
+        composable("document_details/{documentId}") { backStackEntry ->
+            val documentId = backStackEntry.arguments
+                ?.getString("documentId")
+                ?.toIntOrNull() ?: 0
+
+            DocumentDetailsScreen(
+                navController = navController,
+                documentViewModel = documentViewModel,
+                documentId = documentId
+            )
         }
 
         composable("reminders") {

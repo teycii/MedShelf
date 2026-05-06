@@ -1,6 +1,7 @@
 package com.example.medshelf.viewmodel
 
 import android.app.Application
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.medshelf.data.AppDatabase
@@ -23,6 +24,8 @@ class DocumentViewModel(application: Application) : AndroidViewModel(application
                 initialValue = emptyList()
             )
 
+    val selectedDocument = mutableStateOf<DocumentEntity?>(null)
+
     fun addDocument(
         name: String,
         type: String,
@@ -33,7 +36,6 @@ class DocumentViewModel(application: Application) : AndroidViewModel(application
         fileUri: String
     ) {
         viewModelScope.launch {
-
             val document = DocumentEntity(
                 id = 0,
                 name = name,
@@ -50,9 +52,14 @@ class DocumentViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun loadDocumentById(documentId: Int) {
+        viewModelScope.launch {
+            selectedDocument.value = documentDao.getDocumentById(documentId)
+        }
+    }
+
     fun loadDocuments() {
-        // intentionally empty
-        // documents StateFlow auto-updates from Room
+        // Room StateFlow auto-updates the documents list.
     }
 
     @Suppress("unused")
