@@ -1,6 +1,9 @@
 package com.example.medshelf.ui.screens
 
+import android.Manifest
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -8,32 +11,32 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.LocalHospital
-import androidx.compose.material.icons.filled.NoteAlt
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.medshelf.viewmodel.DocumentViewModel
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -59,11 +62,12 @@ fun AddDocumentScreen(
     var clinic by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
     var errorMessage by remember { mutableStateOf("") }
 
     var typeExpanded by remember { mutableStateOf(false) }
     var ownerExpanded by remember { mutableStateOf(false) }
-    val showDatePicker = remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     val datePickerState = rememberDatePickerState()
 
@@ -90,10 +94,7 @@ fun AddDocumentScreen(
         "Other"
     )
 
-    val owners = listOf(
-        "Main profile",
-        "Family member"
-    )
+    val owners = listOf("Main profile", "Family member")
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -108,8 +109,46 @@ fun AddDocumentScreen(
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             } catch (_: Exception) {
-                // Prevent crash if permission is already granted or unsupported.
+                // Some providers already grant temporary permission.
             }
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && pendingCameraUri != null) {
+            selectedFileUri = pendingCameraUri
+            errorMessage = ""
+        } else {
+            errorMessage = "Camera capture was cancelled."
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val uri = createCameraImageUri(context)
+            pendingCameraUri = uri
+            cameraLauncher.launch(uri)
+        } else {
+            errorMessage = "Camera permission is required to capture documents."
+        }
+    }
+
+    fun openCamera() {
+        val permissionGranted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (permissionGranted) {
+            val uri = createCameraImageUri(context)
+            pendingCameraUri = uri
+            cameraLauncher.launch(uri)
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
@@ -154,22 +193,28 @@ fun AddDocumentScreen(
             )
 
             Text(
-                text = "Upload and organize a medical document for yourself or a family member.",
+                text = "Upload, scan, or capture a medical document.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = SoftText
             )
 
             UploadBox(
+                context = context,
                 selectedFileUri = selectedFileUri,
-                onClick = {
+                documentType = docType,
+                onUploadClick = {
                     filePickerLauncher.launch(
                         arrayOf(
                             "application/pdf",
                             "image/png",
                             "image/jpeg",
-                            "image/jpg"
+                            "image/jpg",
+                            "image/webp"
                         )
                     )
+                },
+                onCameraClick = {
+                    openCamera()
                 }
             )
 
@@ -211,13 +256,7 @@ fun AddDocumentScreen(
                         )
                         .fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MedGreen,
-                        unfocusedBorderColor = SoftBorder,
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        cursorColor = MedGreen
-                    )
+                    colors = textFieldColors()
                 )
 
                 ExposedDropdownMenu(
@@ -264,13 +303,7 @@ fun AddDocumentScreen(
                         )
                         .fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MedGreen,
-                        unfocusedBorderColor = SoftBorder,
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        cursorColor = MedGreen
-                    )
+                    colors = textFieldColors()
                 )
 
                 ExposedDropdownMenu(
@@ -295,7 +328,7 @@ fun AddDocumentScreen(
                 readOnly = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable {showDatePicker.value = true},
+                    .clickable { showDatePicker = true },
                 label = { Text("Document Date") },
                 placeholder = { Text("Select document date") },
                 leadingIcon = {
@@ -306,7 +339,7 @@ fun AddDocumentScreen(
                     )
                 },
                 trailingIcon = {
-                    IconButton(onClick = { showDatePicker.value = true }) {
+                    IconButton(onClick = { showDatePicker = true }) {
                         Icon(
                             imageVector = Icons.Filled.CalendarMonth,
                             contentDescription = "Choose Date",
@@ -315,13 +348,7 @@ fun AddDocumentScreen(
                     }
                 },
                 shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MedGreen,
-                    unfocusedBorderColor = SoftBorder,
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    cursorColor = MedGreen
-                )
+                colors = textFieldColors()
             )
 
             AddDocumentInputField(
@@ -359,7 +386,7 @@ fun AddDocumentScreen(
                 onClick = {
                     when {
                         selectedFileUri == null -> {
-                            errorMessage = "Please select a file."
+                            errorMessage = "Please upload or capture a document."
                         }
 
                         title.isBlank() -> {
@@ -419,10 +446,10 @@ fun AddDocumentScreen(
         }
     }
 
-    if (showDatePicker.value) {
+    if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = {
-                showDatePicker.value = false
+                showDatePicker = false
             },
             confirmButton = {
                 TextButton(
@@ -431,7 +458,8 @@ fun AddDocumentScreen(
                             date = formatDocumentDate(millis)
                             errorMessage = ""
                         }
-                        showDatePicker.value = false
+
+                        showDatePicker = false
                     }
                 ) {
                     Text("OK")
@@ -440,7 +468,7 @@ fun AddDocumentScreen(
             dismissButton = {
                 TextButton(
                     onClick = {
-                        showDatePicker.value = false
+                        showDatePicker = false
                     }
                 ) {
                     Text("Cancel")
@@ -454,63 +482,157 @@ fun AddDocumentScreen(
 
 @Composable
 private fun UploadBox(
+    context: Context,
     selectedFileUri: Uri?,
-    onClick: () -> Unit
+    documentType: String,
+    onUploadClick: () -> Unit,
+    onCameraClick: () -> Unit
 ) {
+    val imageFile = selectedFileUri?.let { isImageFile(context, it) } == true
+    val accent = categoryColor(documentType)
+    val icon = categoryIcon(documentType)
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(150.dp)
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier.padding(14.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(54.dp)
-                    .background(Color(0xFFE6F7F4), RoundedCornerShape(18.dp)),
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .clickable { onUploadClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = if (selectedFileUri == null) {
-                        Icons.Filled.CloudUpload
-                    } else {
-                        Icons.Filled.CheckCircle
-                    },
-                    contentDescription = null,
-                    tint = MedGreen,
-                    modifier = Modifier.size(32.dp)
-                )
+                when {
+                    selectedFileUri != null && imageFile -> {
+                        AsyncImage(
+                            model = selectedFileUri,
+                            contentDescription = "Selected image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(18.dp))
+                        )
+                    }
+
+                    selectedFileUri != null -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(62.dp)
+                                    .background(
+                                        color = accent.copy(alpha = 0.12f),
+                                        shape = PaperFoldShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = accent,
+                                    modifier = Modifier.size(34.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Text(
+                                text = "File selected",
+                                fontWeight = FontWeight.Bold,
+                                color = DarkText
+                            )
+
+                            Text(
+                                text = selectedFileUri.lastPathSegment ?: "Selected file",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SoftText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    else -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .background(Color(0xFFE6F7F4), RoundedCornerShape(18.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.CloudUpload,
+                                    contentDescription = null,
+                                    tint = MedGreen,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Text(
+                                text = "Upload or capture document",
+                                fontWeight = FontWeight.Bold,
+                                color = DarkText
+                            )
+
+                            Text(
+                                text = "PDF, JPG, PNG, WEBP",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SoftText
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                text = if (selectedFileUri == null) {
-                    "Tap to upload document"
-                } else {
-                    "File selected"
-                },
-                fontWeight = FontWeight.Bold,
-                color = DarkText
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedButton(
+                    onClick = onUploadClick,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CloudUpload,
+                        contentDescription = null
+                    )
 
-            Text(
-                text = selectedFileUri?.lastPathSegment ?: "PDF, JPG, PNG",
-                style = MaterialTheme.typography.bodySmall,
-                color = SoftText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Text("Upload")
+                }
+
+                Button(
+                    onClick = onCameraClick,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MedGreen)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PhotoCamera,
+                        contentDescription = null
+                    )
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Text("Camera")
+                }
+            }
         }
     }
 }
@@ -542,17 +664,90 @@ private fun AddDocumentInputField(
         singleLine = singleLine,
         minLines = minLines,
         shape = RoundedCornerShape(16.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MedGreen,
-            unfocusedBorderColor = SoftBorder,
-            focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White,
-            cursorColor = MedGreen
-        )
+        colors = textFieldColors()
     )
+}
+
+@Composable
+private fun textFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = MedGreen,
+    unfocusedBorderColor = SoftBorder,
+    focusedContainerColor = Color.White,
+    unfocusedContainerColor = Color.White,
+    cursorColor = MedGreen
+)
+
+private val PaperFoldShape: Shape = GenericShape { size, _ ->
+    val fold = size.width * 0.28f
+
+    moveTo(0f, 0f)
+    lineTo(size.width - fold, 0f)
+    lineTo(size.width, fold)
+    lineTo(size.width, size.height)
+    lineTo(0f, size.height)
+    close()
+}
+
+private fun createCameraImageUri(context: Context): Uri {
+    val imageFile = File(
+        context.cacheDir,
+        "medshelf_camera_${System.currentTimeMillis()}.jpg"
+    )
+
+    return FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        imageFile
+    )
+}
+
+private fun isImageFile(
+    context: Context,
+    uri: Uri
+): Boolean {
+    return try {
+        val mimeType = context.contentResolver.getType(uri)
+        mimeType?.startsWith("image/") == true
+    } catch (_: Exception) {
+        false
+    }
 }
 
 private fun formatDocumentDate(millis: Long): String {
     val formatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
     return formatter.format(Date(millis))
+}
+
+private fun categoryIcon(type: String): ImageVector {
+    return when {
+        type.contains("Lab", ignoreCase = true) -> Icons.Default.Biotech
+        type.contains("Prescription", ignoreCase = true) -> Icons.Default.Medication
+        type.contains("Certificate", ignoreCase = true) -> Icons.Default.Badge
+        type.contains("X-Ray", ignoreCase = true) || type.contains("Imaging", ignoreCase = true) -> Icons.Default.MonitorHeart
+        type.contains("Vaccination", ignoreCase = true) -> Icons.Default.Vaccines
+        type.contains("Discharge", ignoreCase = true) -> Icons.Default.LocalHospital
+        type.contains("Bill", ignoreCase = true) -> Icons.AutoMirrored.Filled.ReceiptLong
+        type.contains("Insurance", ignoreCase = true) -> Icons.Default.Shield
+        type.contains("Note", ignoreCase = true) -> Icons.Default.NoteAlt
+        type.contains("Clearance", ignoreCase = true) -> Icons.Default.HealthAndSafety
+        type.contains("ECG", ignoreCase = true) || type.contains("Heart", ignoreCase = true) -> Icons.Default.Favorite
+        else -> Icons.Default.Description
+    }
+}
+
+private fun categoryColor(type: String): Color {
+    return when {
+        type.contains("Lab", ignoreCase = true) -> Color(0xFF0EA5E9)
+        type.contains("Prescription", ignoreCase = true) -> Color(0xFF7C3AED)
+        type.contains("Certificate", ignoreCase = true) -> Color(0xFFF59E0B)
+        type.contains("X-Ray", ignoreCase = true) || type.contains("Imaging", ignoreCase = true) -> Color(0xFF6366F1)
+        type.contains("Vaccination", ignoreCase = true) -> Color(0xFF16A34A)
+        type.contains("Discharge", ignoreCase = true) -> Color(0xFFEF4444)
+        type.contains("Bill", ignoreCase = true) -> Color(0xFFEA580C)
+        type.contains("Insurance", ignoreCase = true) -> Color(0xFF0891B2)
+        type.contains("Note", ignoreCase = true) -> Color(0xFF8B5CF6)
+        type.contains("Clearance", ignoreCase = true) -> Color(0xFF14B8A6)
+        type.contains("ECG", ignoreCase = true) || type.contains("Heart", ignoreCase = true) -> Color(0xFFE11D48)
+        else -> MedGreen
+    }
 }
