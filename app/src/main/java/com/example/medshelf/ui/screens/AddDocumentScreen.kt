@@ -63,7 +63,7 @@ fun AddDocumentScreen(
 
     var typeExpanded by remember { mutableStateOf(false) }
     var ownerExpanded by remember { mutableStateOf(false) }
-    var showDatePicker by remember { mutableStateOf(false) }
+    val showDatePicker = remember { mutableStateOf(false) }
 
     val datePickerState = rememberDatePickerState()
 
@@ -295,7 +295,7 @@ fun AddDocumentScreen(
                 readOnly = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { showDatePicker = true },
+                    .clickable {showDatePicker.value = true},
                 label = { Text("Document Date") },
                 placeholder = { Text("Select document date") },
                 leadingIcon = {
@@ -306,7 +306,7 @@ fun AddDocumentScreen(
                     )
                 },
                 trailingIcon = {
-                    IconButton(onClick = { showDatePicker = true }) {
+                    IconButton(onClick = { showDatePicker.value = true }) {
                         Icon(
                             imageVector = Icons.Filled.CalendarMonth,
                             contentDescription = "Choose Date",
@@ -419,22 +419,19 @@ fun AddDocumentScreen(
         }
     }
 
-    if (showDatePicker) {
+    if (showDatePicker.value) {
         DatePickerDialog(
             onDismissRequest = {
-                showDatePicker = false
+                showDatePicker.value = false
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        val selectedMillis = datePickerState.selectedDateMillis
-
-                        if (selectedMillis != null) {
-                            date = formatDocumentDate(selectedMillis)
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            date = formatDocumentDate(millis)
                             errorMessage = ""
                         }
-
-                        showDatePicker = false
+                        showDatePicker.value = false
                     }
                 ) {
                     Text("OK")
@@ -443,7 +440,7 @@ fun AddDocumentScreen(
             dismissButton = {
                 TextButton(
                     onClick = {
-                        showDatePicker = false
+                        showDatePicker.value = false
                     }
                 ) {
                     Text("Cancel")
