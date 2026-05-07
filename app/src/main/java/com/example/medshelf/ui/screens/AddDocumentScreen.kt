@@ -1,5 +1,6 @@
 package com.example.medshelf.ui.screens
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.Person
@@ -26,11 +28,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.medshelf.viewmodel.DocumentViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val MedGreen = Color(0xFF009688)
 private val DarkText = Color(0xFF111827)
@@ -44,6 +50,8 @@ fun AddDocumentScreen(
     navController: NavController,
     documentViewModel: DocumentViewModel
 ) {
+    val context = LocalContext.current
+
     var title by remember { mutableStateOf("") }
     var docType by remember { mutableStateOf("") }
     var owner by remember { mutableStateOf("Main profile") }
@@ -55,6 +63,9 @@ fun AddDocumentScreen(
 
     var typeExpanded by remember { mutableStateOf(false) }
     var ownerExpanded by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    val datePickerState = rememberDatePickerState()
 
     val documentTypes = listOf(
         "Laboratory Result",
@@ -79,7 +90,10 @@ fun AddDocumentScreen(
         "Other"
     )
 
-    val owners = listOf("Main profile", "Family member")
+    val owners = listOf(
+        "Main profile",
+        "Family member"
+    )
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -87,6 +101,15 @@ fun AddDocumentScreen(
         if (uri != null) {
             selectedFileUri = uri
             errorMessage = ""
+
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+                // Prevent crash if permission is already granted or unsupported.
+            }
         }
     }
 
@@ -97,255 +120,337 @@ fun AddDocumentScreen(
                 navController = navController,
                 showBackButton = true
             )
-        }
+        },
+        bottomBar = {
+            MedShelfBottomBar(navController)
+        },
+        containerColor = Color.Transparent
     ) { paddingValues ->
 
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
                         listOf(
                             Color.White,
-                            Color.White,
+                            Color(0xFFF9FFFC),
                             Color(0xFFEFFFF8)
                         )
                     )
                 )
                 .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Document Information",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = DarkText
+            )
+
+            Text(
+                text = "Upload and organize a medical document for yourself or a family member.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = SoftText
+            )
+
+            UploadBox(
+                selectedFileUri = selectedFileUri,
+                onClick = {
+                    filePickerLauncher.launch(
+                        arrayOf(
+                            "application/pdf",
+                            "image/png",
+                            "image/jpeg",
+                            "image/jpg"
+                        )
+                    )
+                }
+            )
+
+            AddDocumentInputField(
+                label = "Document Title",
+                value = title,
+                icon = Icons.Filled.Description,
+                placeholder = "e.g., CBC Lab Result",
+                onValueChange = {
+                    title = it
+                    errorMessage = ""
+                }
+            )
+
+            ExposedDropdownMenuBox(
+                expanded = typeExpanded,
+                onExpandedChange = { typeExpanded = !typeExpanded }
             ) {
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = "Document Information",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = DarkText
+                OutlinedTextField(
+                    value = docType,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Document Type") },
+                    placeholder = { Text("Select document type") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Category,
+                            contentDescription = null,
+                            tint = SoftText
+                        )
+                    },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded)
+                    },
+                    modifier = Modifier
+                        .menuAnchor(
+                            type = MenuAnchorType.PrimaryNotEditable,
+                            enabled = true
+                        )
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MedGreen,
+                        unfocusedBorderColor = SoftBorder,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        cursorColor = MedGreen
+                    )
                 )
 
-                Text(
-                    text = "Upload and organize a medical document.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SoftText
-                )
-
-                UploadBox(
-                    selectedFileUri = selectedFileUri,
-                    onClick = {
-                        filePickerLauncher.launch(arrayOf("application/pdf", "image/*"))
-                    }
-                )
-
-                AddDocumentInputField(
-                    label = "Document Title",
-                    value = title,
-                    icon = Icons.Filled.Description,
-                    placeholder = "e.g., CBC Lab Result",
-                    onValueChange = {
-                        title = it
-                        errorMessage = ""
-                    }
-                )
-
-                ExposedDropdownMenuBox(
+                ExposedDropdownMenu(
                     expanded = typeExpanded,
-                    onExpandedChange = { typeExpanded = !typeExpanded }
+                    onDismissRequest = { typeExpanded = false }
                 ) {
-                    OutlinedTextField(
-                        value = docType,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Document Type") },
-                        placeholder = { Text("Select document type") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Filled.Category,
-                                contentDescription = null,
-                                tint = SoftText
-                            )
-                        },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded)
-                        },
-                        modifier = Modifier
-                            .menuAnchor(
-                                type = MenuAnchorType.PrimaryNotEditable,
-                                enabled = true
-                            )
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MedGreen,
-                            unfocusedBorderColor = SoftBorder,
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            cursorColor = MedGreen
+                    documentTypes.forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text(type) },
+                            onClick = {
+                                docType = type
+                                typeExpanded = false
+                                errorMessage = ""
+                            }
                         )
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = typeExpanded,
-                        onDismissRequest = { typeExpanded = false }
-                    ) {
-                        documentTypes.forEach { type ->
-                            DropdownMenuItem(
-                                text = { Text(type) },
-                                onClick = {
-                                    docType = type
-                                    typeExpanded = false
-                                    errorMessage = ""
-                                }
-                            )
-                        }
                     }
                 }
+            }
 
-                ExposedDropdownMenuBox(
+            ExposedDropdownMenuBox(
+                expanded = ownerExpanded,
+                onExpandedChange = { ownerExpanded = !ownerExpanded }
+            ) {
+                OutlinedTextField(
+                    value = owner,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Profile / Owner") },
+                    placeholder = { Text("Select profile") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = null,
+                            tint = SoftText
+                        )
+                    },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = ownerExpanded)
+                    },
+                    modifier = Modifier
+                        .menuAnchor(
+                            type = MenuAnchorType.PrimaryNotEditable,
+                            enabled = true
+                        )
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MedGreen,
+                        unfocusedBorderColor = SoftBorder,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        cursorColor = MedGreen
+                    )
+                )
+
+                ExposedDropdownMenu(
                     expanded = ownerExpanded,
-                    onExpandedChange = { ownerExpanded = !ownerExpanded }
+                    onDismissRequest = { ownerExpanded = false }
                 ) {
-                    OutlinedTextField(
-                        value = owner,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Profile / Owner") },
-                        placeholder = { Text("Select profile") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Filled.Person,
-                                contentDescription = null,
-                                tint = SoftText
-                            )
-                        },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = ownerExpanded)
-                        },
-                        modifier = Modifier
-                            .menuAnchor(
-                                type = MenuAnchorType.PrimaryNotEditable,
-                                enabled = true
-                            )
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MedGreen,
-                            unfocusedBorderColor = SoftBorder,
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            cursorColor = MedGreen
+                    owners.forEach { item ->
+                        DropdownMenuItem(
+                            text = { Text(item) },
+                            onClick = {
+                                owner = item
+                                ownerExpanded = false
+                            }
                         )
-                    )
+                    }
+                }
+            }
 
-                    ExposedDropdownMenu(
-                        expanded = ownerExpanded,
-                        onDismissRequest = { ownerExpanded = false }
-                    ) {
-                        owners.forEach { item ->
-                            DropdownMenuItem(
-                                text = { Text(item) },
-                                onClick = {
-                                    owner = item
-                                    ownerExpanded = false
-                                }
-                            )
+            OutlinedTextField(
+                value = date,
+                onValueChange = {},
+                readOnly = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showDatePicker = true },
+                label = { Text("Document Date") },
+                placeholder = { Text("Select document date") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Event,
+                        contentDescription = null,
+                        tint = SoftText
+                    )
+                },
+                trailingIcon = {
+                    IconButton(onClick = { showDatePicker = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.CalendarMonth,
+                            contentDescription = "Choose Date",
+                            tint = MedGreen
+                        )
+                    }
+                },
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MedGreen,
+                    unfocusedBorderColor = SoftBorder,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    cursorColor = MedGreen
+                )
+            )
+
+            AddDocumentInputField(
+                label = "Doctor / Clinic / Hospital",
+                value = clinic,
+                icon = Icons.Filled.LocalHospital,
+                placeholder = "e.g., City Health Laboratory",
+                onValueChange = {
+                    clinic = it
+                }
+            )
+
+            AddDocumentInputField(
+                label = "Notes / Details",
+                value = notes,
+                icon = Icons.Filled.NoteAlt,
+                placeholder = "e.g., Routine checkup, normal result",
+                singleLine = false,
+                minLines = 4,
+                onValueChange = {
+                    notes = it
+                }
+            )
+
+            if (errorMessage.isNotBlank()) {
+                Text(
+                    text = errorMessage,
+                    color = ErrorRed,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Button(
+                onClick = {
+                    when {
+                        selectedFileUri == null -> {
+                            errorMessage = "Please select a file."
                         }
-                    }
-                }
 
-                AddDocumentInputField(
-                    label = "Document Date",
-                    value = date,
-                    icon = Icons.Filled.CalendarMonth,
-                    placeholder = "e.g., May 18, 2024",
-                    onValueChange = {
-                        date = it
-                        errorMessage = ""
-                    }
-                )
+                        title.isBlank() -> {
+                            errorMessage = "Please enter the document title."
+                        }
 
-                AddDocumentInputField(
-                    label = "Doctor / Clinic",
-                    value = clinic,
-                    icon = Icons.Filled.LocalHospital,
-                    placeholder = "e.g., City Health Laboratory",
-                    onValueChange = { clinic = it }
-                )
+                        docType.isBlank() -> {
+                            errorMessage = "Please select the document type."
+                        }
 
-                AddDocumentInputField(
-                    label = "Notes",
-                    value = notes,
-                    icon = Icons.Filled.NoteAlt,
-                    placeholder = "e.g., Routine checkup, normal result",
-                    singleLine = false,
-                    minLines = 3,
-                    onValueChange = { notes = it }
-                )
+                        date.isBlank() -> {
+                            errorMessage = "Please select the document date."
+                        }
 
-                if (errorMessage.isNotBlank()) {
-                    Text(
-                        text = errorMessage,
-                        color = ErrorRed,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
+                        else -> {
+                            documentViewModel.addDocument(
+                                name = title.trim(),
+                                type = docType.trim(),
+                                owner = owner.trim(),
+                                date = date.trim(),
+                                clinic = clinic.ifBlank { "Not specified" },
+                                notes = notes.ifBlank { "No notes" },
+                                fileUri = selectedFileUri.toString()
+                            )
 
-                Button(
-                    onClick = {
-                        when {
-                            selectedFileUri == null -> errorMessage = "Please select a file."
-                            title.isBlank() -> errorMessage = "Please enter the document title."
-                            docType.isBlank() -> errorMessage = "Please select the document type."
-                            date.isBlank() -> errorMessage = "Please enter the document date."
-
-                            else -> {
-                                documentViewModel.addDocument(
-                                    name = title.trim(),
-                                    type = docType.trim(),
-                                    owner = owner.trim(),
-                                    date = date.trim(),
-                                    clinic = clinic.ifBlank { "Not specified" },
-                                    notes = notes.ifBlank { "No notes" },
-                                    fileUri = selectedFileUri.toString()
-                                )
-
-                                navController.navigate("document_library") {
-                                    popUpTo("add_document") { inclusive = true }
+                            navController.navigate("document_library") {
+                                popUpTo("add_document") {
+                                    inclusive = true
                                 }
                             }
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MedGreen,
-                        contentColor = Color.White
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Save,
-                        contentDescription = null
-                    )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MedGreen,
+                    contentColor = Color.White
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Save,
+                    contentDescription = null
+                )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
-                    Text(
-                        text = "Save Document",
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(28.dp))
+                Text(
+                    text = "Save Document",
+                    fontWeight = FontWeight.Bold
+                )
             }
+
+            Spacer(modifier = Modifier.height(30.dp))
+        }
+    }
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = {
+                showDatePicker = false
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val selectedMillis = datePickerState.selectedDateMillis
+
+                        if (selectedMillis != null) {
+                            date = formatDocumentDate(selectedMillis)
+                            errorMessage = ""
+                        }
+
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }
@@ -379,7 +484,11 @@ private fun UploadBox(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (selectedFileUri == null) Icons.Filled.CloudUpload else Icons.Filled.CheckCircle,
+                    imageVector = if (selectedFileUri == null) {
+                        Icons.Filled.CloudUpload
+                    } else {
+                        Icons.Filled.CheckCircle
+                    },
                     contentDescription = null,
                     tint = MedGreen,
                     modifier = Modifier.size(32.dp)
@@ -389,7 +498,11 @@ private fun UploadBox(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = if (selectedFileUri == null) "Tap to upload document" else "File selected",
+                text = if (selectedFileUri == null) {
+                    "Tap to upload document"
+                } else {
+                    "File selected"
+                },
                 fontWeight = FontWeight.Bold,
                 color = DarkText
             )
@@ -440,4 +553,9 @@ private fun AddDocumentInputField(
             cursorColor = MedGreen
         )
     )
+}
+
+private fun formatDocumentDate(millis: Long): String {
+    val formatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    return formatter.format(Date(millis))
 }
