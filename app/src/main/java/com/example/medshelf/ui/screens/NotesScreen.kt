@@ -29,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.medshelf.model.NoteEntity
+import com.example.medshelf.viewmodel.NoteViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,27 +41,25 @@ private val SoftText = Color(0xFF64748B)
 private val SoftBorder = Color(0xFFE2E8F0)
 private val ScreenBg = Color(0xFFF8FAFC)
 
-data class MedicalNote(
-    val id: Int,
-    val title: String,
-    val content: String,
-    val category: String,
-    val noteDate: String,
-    val noteTime: String,
-    val isPinned: Boolean = false
-)
-
 private sealed class NoteDialogState {
     data object Closed : NoteDialogState()
     data object Add : NoteDialogState()
-    data class Edit(val note: MedicalNote) : NoteDialogState()
+    data class Edit(val note: NoteEntity) : NoteDialogState()
 }
 
 @Composable
-fun NotesScreen(navController: NavController) {
-    var notes by remember { mutableStateOf<List<MedicalNote>>(emptyList()) }
+fun NotesScreen(
+    navController: NavController,
+    noteViewModel: NoteViewModel
+) {
+    val notes = noteViewModel.notes.value
+
     var searchText by remember { mutableStateOf("") }
     var dialogState by remember { mutableStateOf<NoteDialogState>(NoteDialogState.Closed) }
+
+    LaunchedEffect(Unit) {
+        noteViewModel.loadNotes()
+    }
 
     val filteredNotes = notes
         .filter { note ->
@@ -69,7 +69,7 @@ fun NotesScreen(navController: NavController) {
                     note.noteDate.contains(searchText, true) ||
                     note.noteTime.contains(searchText, true)
         }
-        .sortedWith(compareByDescending<MedicalNote> { it.isPinned }.thenByDescending { it.id })
+        .sortedWith(compareByDescending<NoteEntity> { it.isPinned }.thenByDescending { it.id })
 
     Scaffold(
         bottomBar = { MedShelfBottomBar(navController) },
@@ -120,16 +120,12 @@ fun NotesScreen(navController: NavController) {
                                 dialogState = NoteDialogState.Edit(note)
                             },
                             onPinClick = {
-                                notes = notes.map { item ->
-                                    if (item.id == note.id) {
-                                        item.copy(isPinned = !item.isPinned)
-                                    } else {
-                                        item
-                                    }
-                                }
+                                noteViewModel.updateNote(
+                                    note.copy(isPinned = !note.isPinned)
+                                )
                             },
                             onDeleteClick = {
-                                notes = notes.filter { item -> item.id != note.id }
+                                noteViewModel.deleteNote(note)
                             }
                         )
                     }
@@ -146,8 +142,7 @@ fun NotesScreen(navController: NavController) {
                 existingNote = null,
                 onDismiss = { dialogState = NoteDialogState.Closed },
                 onSave = { title, content, category, noteDate, noteTime ->
-                    notes = notes + MedicalNote(
-                        id = (notes.maxOfOrNull { it.id } ?: 0) + 1,
+                    noteViewModel.addNote(
                         title = title,
                         content = content,
                         category = category,
@@ -165,19 +160,15 @@ fun NotesScreen(navController: NavController) {
                 existingNote = state.note,
                 onDismiss = { dialogState = NoteDialogState.Closed },
                 onSave = { title, content, category, noteDate, noteTime ->
-                    notes = notes.map { item ->
-                        if (item.id == state.note.id) {
-                            item.copy(
-                                title = title,
-                                content = content,
-                                category = category,
-                                noteDate = noteDate,
-                                noteTime = noteTime
-                            )
-                        } else {
-                            item
-                        }
-                    }
+                    noteViewModel.updateNote(
+                        state.note.copy(
+                            title = title,
+                            content = content,
+                            category = category,
+                            noteDate = noteDate,
+                            noteTime = noteTime
+                        )
+                    )
 
                     dialogState = NoteDialogState.Closed
                 }
@@ -247,7 +238,7 @@ private fun SearchField(
 
 @Composable
 private fun NoteCard(
-    note: MedicalNote,
+    note: NoteEntity,
     onEditClick: () -> Unit,
     onPinClick: () -> Unit,
     onDeleteClick: () -> Unit
@@ -381,7 +372,7 @@ private fun EmptyNotesView() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddEditNoteDialog(
-    existingNote: MedicalNote?,
+    existingNote: NoteEntity?,
     onDismiss: () -> Unit,
     onSave: (String, String, String, String, String) -> Unit
 ) {
@@ -412,7 +403,10 @@ private fun AddEditNoteDialog(
             Column {
                 OutlinedTextField(
                     value = title,
-                    onValueChange = { title = it },
+                    onValueChange = {
+                        title = it
+                        error = ""
+                    },
                     label = { Text("Note Title") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -423,7 +417,10 @@ private fun AddEditNoteDialog(
 
                 OutlinedTextField(
                     value = content,
-                    onValueChange = { content = it },
+                    onValueChange = {
+                        content = it
+                        error = ""
+                    },
                     label = { Text("Note Details") },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -435,33 +432,45 @@ private fun AddEditNoteDialog(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
-                        value = noteDate,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Date") },
-                        trailingIcon = {
-                            Icon(Icons.Default.CalendarMonth, contentDescription = null)
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { showDatePicker = true },
-                        shape = RoundedCornerShape(13.dp)
-                    )
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = noteDate,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Date") },
+                            trailingIcon = {
+                                Icon(Icons.Default.CalendarMonth, contentDescription = null)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(13.dp)
+                        )
 
-                    OutlinedTextField(
-                        value = noteTime,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Time") },
-                        trailingIcon = {
-                            Icon(Icons.Default.AccessTime, contentDescription = null)
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { showTimePicker = true },
-                        shape = RoundedCornerShape(13.dp)
-                    )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable { showDatePicker = true }
+                        )
+                    }
+
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = noteTime,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Time") },
+                            trailingIcon = {
+                                Icon(Icons.Default.AccessTime, contentDescription = null)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(13.dp)
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable { showTimePicker = true }
+                        )
+                    }
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
