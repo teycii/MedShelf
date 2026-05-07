@@ -1,5 +1,6 @@
 package com.example.medshelf.ui.screens
 
+import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,42 +14,9 @@ import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.Biotech
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.HealthAndSafety
-import androidx.compose.material.icons.filled.LocalHospital
-import androidx.compose.material.icons.filled.Medication
-import androidx.compose.material.icons.filled.MonitorHeart
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.NoteAlt
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Vaccines
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -79,15 +48,24 @@ fun DocumentLibraryScreen(
     val documents by documentViewModel.documents.collectAsState()
 
     var selectedFilter by remember { mutableStateOf("All") }
+    var searchQuery by remember { mutableStateOf("") }
     var documentToDelete by remember { mutableStateOf<DocumentEntity?>(null) }
 
     val categories = documentCategories()
 
-    val filteredDocuments = if (selectedFilter == "All") {
-        documents
-    } else {
-        documents.filter { it.type.equals(selectedFilter, ignoreCase = true) }
-    }
+    val filteredDocuments = documents
+        .filter { document ->
+            selectedFilter == "All" || document.type.equals(selectedFilter, ignoreCase = true)
+        }
+        .filter { document ->
+            searchQuery.isBlank() ||
+                    document.name.contains(searchQuery, ignoreCase = true) ||
+                    document.type.contains(searchQuery, ignoreCase = true) ||
+                    document.owner.contains(searchQuery, ignoreCase = true) ||
+                    document.clinic.contains(searchQuery, ignoreCase = true) ||
+                    document.date.contains(searchQuery, ignoreCase = true) ||
+                    document.notes.contains(searchQuery, ignoreCase = true)
+        }
 
     Scaffold(
         topBar = {
@@ -133,6 +111,16 @@ fun DocumentLibraryScreen(
                 documentCount = documents.size
             )
 
+            SearchSection(
+                searchQuery = searchQuery,
+                onSearchChange = {
+                    searchQuery = it
+                },
+                onClearSearch = {
+                    searchQuery = ""
+                }
+            )
+
             CategorySection(
                 categories = categories,
                 selectedFilter = selectedFilter,
@@ -144,6 +132,7 @@ fun DocumentLibraryScreen(
             if (filteredDocuments.isEmpty()) {
                 EmptyDocumentState(
                     selectedFilter = selectedFilter,
+                    searchQuery = searchQuery,
                     onAddClick = { navController.navigate("add_document") }
                 )
             } else {
@@ -205,6 +194,52 @@ fun DocumentLibraryScreen(
 }
 
 @Composable
+private fun SearchSection(
+    searchQuery: String,
+    onSearchChange: (String) -> Unit,
+    onClearSearch: () -> Unit
+) {
+    OutlinedTextField(
+        value = searchQuery,
+        onValueChange = onSearchChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 14.dp),
+        placeholder = {
+            Text("Search documents...")
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = SoftText
+            )
+        },
+        trailingIcon = {
+            if (searchQuery.isNotBlank()) {
+                IconButton(onClick = onClearSearch) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Clear Search",
+                        tint = SoftText
+                    )
+                }
+            }
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(16.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MedGreen,
+            unfocusedBorderColor = SoftBorder,
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White,
+            cursorColor = MedGreen
+        )
+    )
+}
+
+@Composable
 private fun DeleteDocumentDialog(
     document: DocumentEntity,
     onDismiss: () -> Unit,
@@ -251,49 +286,22 @@ private fun LibraryHeader(
             .padding(horizontal = 20.dp)
             .padding(top = 16.dp, bottom = 12.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = "Medical Documents",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = DarkText
-                )
+        Text(
+            text = "Medical Documents",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = DarkText
+        )
 
-                Spacer(modifier = Modifier.height(3.dp))
+        Spacer(modifier = Modifier.height(3.dp))
 
-                Text(
-                    text = "$documentCount saved record${if (documentCount == 1) "" else "s"} for you and your family",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SoftText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Surface(
-                modifier = Modifier.size(42.dp),
-                shape = RoundedCornerShape(14.dp),
-                color = Color.White,
-                border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder),
-                shadowElevation = 1.dp
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = SoftText,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-        }
+        Text(
+            text = "$documentCount saved record${if (documentCount == 1) "" else "s"} for you and your family",
+            style = MaterialTheme.typography.bodySmall,
+            color = SoftText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -519,7 +527,8 @@ private fun DocumentPreviewBox(
     accent: Color,
     icon: ImageVector
 ) {
-    val imageFile = isImageFile(fileUri)
+    val context = LocalContext.current
+    val imageFile = isImageFile(context, fileUri)
 
     Box {
         if (imageFile) {
@@ -678,6 +687,7 @@ private fun AddDocumentGridItem(
 @Composable
 private fun EmptyDocumentState(
     selectedFilter: String,
+    searchQuery: String,
     onAddClick: () -> Unit
 ) {
     Column(
@@ -704,10 +714,10 @@ private fun EmptyDocumentState(
         Spacer(modifier = Modifier.height(18.dp))
 
         Text(
-            text = if (selectedFilter == "All") {
-                "No documents yet"
-            } else {
-                "No $selectedFilter documents"
+            text = when {
+                searchQuery.isNotBlank() -> "No results found"
+                selectedFilter == "All" -> "No documents yet"
+                else -> "No $selectedFilter documents"
             },
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
@@ -717,26 +727,32 @@ private fun EmptyDocumentState(
         Spacer(modifier = Modifier.height(5.dp))
 
         Text(
-            text = "Upload your first medical document to start organizing.",
+            text = if (searchQuery.isNotBlank()) {
+                "Try another keyword or clear the search."
+            } else {
+                "Upload your first medical document to start organizing."
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = SoftText
         )
 
-        Spacer(modifier = Modifier.height(18.dp))
+        if (searchQuery.isBlank()) {
+            Spacer(modifier = Modifier.height(18.dp))
 
-        Button(
-            onClick = onAddClick,
-            colors = ButtonDefaults.buttonColors(containerColor = MedGreen),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = null
-            )
+            Button(
+                onClick = onAddClick,
+                colors = ButtonDefaults.buttonColors(containerColor = MedGreen),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null
+                )
 
-            Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
-            Text("Add Document")
+                Text("Add Document")
+            }
         }
     }
 }
@@ -752,14 +768,17 @@ private val PaperFoldShape: Shape = GenericShape { size, _ ->
     close()
 }
 
-private fun isImageFile(fileUri: String): Boolean {
-    val lowerUri = fileUri.lowercase()
-
-    return lowerUri.contains("image") ||
-            lowerUri.endsWith(".jpg") ||
-            lowerUri.endsWith(".jpeg") ||
-            lowerUri.endsWith(".png") ||
-            lowerUri.endsWith(".webp")
+private fun isImageFile(
+    context: Context,
+    fileUri: String
+): Boolean {
+    return try {
+        val uri = Uri.parse(fileUri)
+        val mimeType = context.contentResolver.getType(uri)
+        mimeType?.startsWith("image/") == true
+    } catch (_: Exception) {
+        false
+    }
 }
 
 private fun categoryIcon(type: String): ImageVector {

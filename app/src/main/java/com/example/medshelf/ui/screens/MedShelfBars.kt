@@ -66,44 +66,42 @@ fun MedShelfBottomBar(navController: NavController) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(86.dp),
+            .height(92.dp),
         color = Color.White,
-        shadowElevation = 10.dp,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        shadowElevation = 14.dp,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 18.dp),
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            BottomItem(
+            BottomNavItem(
                 label = "Home",
                 icon = Icons.Outlined.Home,
-                selected = currentRoute == "dashboard",
-                onClick = {
-                    navController.navigate("dashboard") {
-                        launchSingleTop = true
-                        popUpTo("dashboard") { inclusive = false }
-                    }
+                selected = currentRoute == "dashboard"
+            ) {
+                navController.navigate("dashboard") {
+                    launchSingleTop = true
+                    popUpTo("dashboard") { inclusive = false }
                 }
-            )
+            }
 
-            BottomItem(
+            BottomNavItem(
                 label = "Documents",
                 icon = Icons.Outlined.Folder,
-                selected = currentRoute == "document_library",
-                onClick = {
-                    navController.navigate("document_library") {
-                        launchSingleTop = true
-                    }
+                selected = currentRoute == "document_library"
+            ) {
+                navController.navigate("document_library") {
+                    launchSingleTop = true
                 }
-            )
+            }
 
             Box(
                 modifier = Modifier
-                    .size(54.dp)
+                    .size(58.dp)
                     .background(MedGreen, CircleShape)
                     .clickable {
                         navController.navigate("add_document") {
@@ -116,60 +114,81 @@ fun MedShelfBottomBar(navController: NavController) {
                     imageVector = Icons.Filled.Add,
                     contentDescription = "Add Document",
                     tint = Color.White,
-                    modifier = Modifier.size(31.dp)
+                    modifier = Modifier.size(32.dp)
                 )
             }
 
-            BottomItem(
+            BottomNavItem(
                 label = "Reminders",
                 icon = Icons.Outlined.Notifications,
-                selected = currentRoute == "reminders",
-                onClick = {
-                    navController.navigate("reminders") {
-                        launchSingleTop = true
-                    }
+                selected = currentRoute == "reminders"
+            ) {
+                navController.navigate("reminders") {
+                    launchSingleTop = true
                 }
-            )
+            }
 
-            BottomItem(
+            BottomNavItem(
+                label = "Notes",
+                icon = Icons.Outlined.NoteAlt,
+                selected = currentRoute == "notes"
+            ) {
+                navController.navigate("notes") {
+                    launchSingleTop = true
+                }
+            }
+
+            BottomNavItem(
                 label = "Profile",
                 icon = Icons.Outlined.AccountCircle,
-                selected = currentRoute == "edit_profile",
-                onClick = {
-                    navController.navigate("edit_profile") {
-                        launchSingleTop = true
-                    }
+                selected = currentRoute == "edit_profile"
+            ) {
+                navController.navigate("edit_profile") {
+                    launchSingleTop = true
                 }
-            )
+            }
         }
     }
 }
 
 @Composable
-private fun BottomItem(
+private fun BottomNavItem(
     label: String,
     icon: ImageVector,
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    TextButton(
-        onClick = onClick,
-        contentPadding = PaddingValues(0.dp)
+    Column(
+        modifier = Modifier
+            .width(58.dp)
+            .clickable { onClick() },
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .background(
+                    color = if (selected) MedGreen.copy(alpha = 0.13f) else Color.Transparent,
+                    shape = RoundedCornerShape(14.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
                 tint = if (selected) MedGreen else SoftText,
-                modifier = Modifier.size(21.dp)
-            )
-
-            Text(
-                text = label,
-                color = if (selected) MedGreen else SoftText,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                modifier = Modifier.size(22.dp)
             )
         }
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        Text(
+            text = label,
+            color = if (selected) MedGreen else SoftText,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 1
+        )
     }
 }

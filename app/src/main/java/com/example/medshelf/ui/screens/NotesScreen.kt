@@ -86,9 +86,13 @@ fun NotesScreen(
         .sortedWith(compareByDescending<MedicalNote> { it.isPinned }.thenByDescending { it.id })
 
     Scaffold(
+        bottomBar = {
+            MedShelfBottomBar(navController)
+        },
         floatingActionButton = {
             FloatingActionButton(
                 containerColor = MedGreen,
+                contentColor = Color.White,
                 onClick = {
                     selectedNote = null
                     showDialog = true
@@ -96,11 +100,11 @@ fun NotesScreen(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Add,
-                    contentDescription = "Add Note",
-                    tint = Color.White
+                    contentDescription = "Add Note"
                 )
             }
-        }
+        },
+        containerColor = Color(0xFFF8FAFC)
     ) { padding ->
 
         Column(
