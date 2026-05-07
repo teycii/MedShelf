@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.*
 import androidx.navigation.NavController
 import com.example.medshelf.viewmodel.DocumentViewModel
 
@@ -138,8 +139,17 @@ fun DocumentLibraryScreen(
                             type = doc.type,
                             owner = doc.owner,
                             date = doc.date,
+
                             onClick = {
                                 navController.navigate("document_details/${doc.id}")
+                            },
+
+                            onEditClick = {
+                                navController.navigate("document_details/${doc.id}")
+                            },
+
+                            onDeleteClick = {
+                                documentViewModel.deleteDocument(doc)
                             }
                         )
                     }
@@ -316,7 +326,9 @@ fun DocumentGridItem(
     type: String,
     owner: String,
     date: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     val accent = categoryColor(type)
     val icon = categoryIcon(type)
@@ -376,12 +388,62 @@ fun DocumentGridItem(
                     }
                 }
 
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More",
-                    tint = SoftText,
-                    modifier = Modifier.size(20.dp)
-                )
+                var menuExpanded by remember { mutableStateOf(false) }
+
+                Box {
+                    IconButton(
+                        onClick = {
+                            menuExpanded = true
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More",
+                            tint = SoftText,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = {
+                            menuExpanded = false
+                        }
+                    ) {
+
+                        DropdownMenuItem(
+                            text = {
+                                Text("View Details")
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                onClick()
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = {
+                                Text("Edit")
+                            },
+                            onClick = {
+                                menuExpanded = false
+
+                                onEditClick()
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = {
+                                Text("Delete")
+                            },
+                            onClick = {
+                                menuExpanded = false
+
+                                onDeleteClick()
+                            }
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(18.dp))
