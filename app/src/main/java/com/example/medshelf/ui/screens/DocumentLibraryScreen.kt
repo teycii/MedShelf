@@ -28,11 +28,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -58,6 +53,7 @@ fun DocumentLibraryScreen(
 ) {
     val documents by documentViewModel.documents.collectAsState()
     val selectedFilter = remember { mutableStateOf("All") }
+    var documentToDelete by remember { mutableStateOf<com.example.medshelf.model.DocumentEntity?>(null) }
 
     val categories = documentCategories()
 
@@ -88,8 +84,47 @@ fun DocumentLibraryScreen(
             }
         },
         containerColor = Color.Transparent
-    ) { paddingValues ->
+    )
 
+    { paddingValues ->
+        documentToDelete?.let { document ->
+            AlertDialog(
+                onDismissRequest = {
+                    documentToDelete = null
+                },
+                title = {
+                    Text(
+                        text = "Delete Document",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text("Are you sure you want to delete \"${document.name}\"?")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            documentViewModel.deleteDocument(document)
+                            documentToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFEF4444)
+                        )
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            documentToDelete = null
+                        }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -149,7 +184,7 @@ fun DocumentLibraryScreen(
                             },
 
                             onDeleteClick = {
-                                documentViewModel.deleteDocument(doc)
+                                documentToDelete = doc
                             }
                         )
                     }
