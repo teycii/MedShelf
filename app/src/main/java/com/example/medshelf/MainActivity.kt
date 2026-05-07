@@ -19,9 +19,9 @@ import com.example.medshelf.data.AppDatabase
 import com.example.medshelf.ui.screens.*
 import com.example.medshelf.ui.theme.MedShelfTheme
 import com.example.medshelf.viewmodel.DocumentViewModel
+import com.example.medshelf.viewmodel.NoteViewModel
 import com.example.medshelf.viewmodel.UserViewModel
 import com.example.medshelf.viewmodel.UserViewModelFactory
-import com.example.medshelf.viewmodel.NoteViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -40,10 +40,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MedShelfApp(database: AppDatabase) {
-
     val navController = rememberNavController()
 
     val documentViewModel: DocumentViewModel = viewModel()
+    val noteViewModel: NoteViewModel = viewModel()
 
     val userViewModel: UserViewModel = viewModel(
         factory = UserViewModelFactory(database.userDao())
@@ -53,9 +53,7 @@ fun MedShelfApp(database: AppDatabase) {
         navController = navController,
         startDestination = "loading"
     ) {
-
         composable("loading") {
-
             LaunchedEffect(Unit) {
                 userViewModel.loadUser()
             }
@@ -64,19 +62,14 @@ fun MedShelfApp(database: AppDatabase) {
             val user = userViewModel.user.value
 
             LaunchedEffect(isLoaded, user) {
-
                 if (isLoaded) {
-
                     if (user == null) {
-
                         navController.navigate("registration") {
                             popUpTo("loading") {
                                 inclusive = true
                             }
                         }
-
                     } else {
-
                         navController.navigate("dashboard") {
                             popUpTo("loading") {
                                 inclusive = true
@@ -95,7 +88,6 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("registration") {
-
             RegistrationScreen(
                 navController = navController,
                 userViewModel = userViewModel
@@ -103,7 +95,6 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("dashboard") {
-
             DashboardScreen(
                 navController = navController,
                 userViewModel = userViewModel
@@ -111,7 +102,6 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("document_library") {
-
             DocumentLibraryScreen(
                 navController = navController,
                 documentViewModel = documentViewModel
@@ -119,7 +109,6 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("add_document") {
-
             AddDocumentScreen(
                 navController = navController,
                 documentViewModel = documentViewModel
@@ -127,7 +116,6 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("document_details/{documentId}") { backStackEntry ->
-
             val documentId = backStackEntry.arguments
                 ?.getString("documentId")
                 ?.toIntOrNull() ?: 0
@@ -140,7 +128,6 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("edit_document/{documentId}") { backStackEntry ->
-
             val documentId = backStackEntry.arguments
                 ?.getString("documentId")
                 ?.toIntOrNull() ?: 0
@@ -153,7 +140,6 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("emergency_snapshot") {
-
             EmergencySnapshotScreen(
                 navController = navController,
                 userViewModel = userViewModel
@@ -161,7 +147,6 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("edit_profile") {
-
             EditProfileScreen(
                 navController = navController,
                 userViewModel = userViewModel
@@ -169,16 +154,15 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("reminders") {
-
             RemindersScreen(
                 navController = navController
             )
         }
 
         composable("notes") {
-
             NotesScreen(
-                navController = navController
+                navController = navController,
+                noteViewModel = noteViewModel
             )
         }
 
