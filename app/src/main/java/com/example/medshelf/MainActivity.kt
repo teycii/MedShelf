@@ -21,6 +21,7 @@ import com.example.medshelf.ui.theme.MedShelfTheme
 import com.example.medshelf.viewmodel.DocumentViewModel
 import com.example.medshelf.viewmodel.UserViewModel
 import com.example.medshelf.viewmodel.UserViewModelFactory
+import com.example.medshelf.viewmodel.NoteViewModel
 
 class MainActivity : ComponentActivity() {
 
