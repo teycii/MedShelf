@@ -40,6 +40,7 @@ private val DarkText = Color(0xFF111827)
 private val SoftText = Color(0xFF64748B)
 private val SoftBorder = Color(0xFFE2E8F0)
 private val ScreenBg = Color(0xFFF8FAFC)
+private val ErrorRed = Color(0xFFEF4444)
 
 private sealed class NoteDialogState {
     data object Closed : NoteDialogState()
@@ -56,6 +57,7 @@ fun NotesScreen(
 
     var searchText by remember { mutableStateOf("") }
     var dialogState by remember { mutableStateOf<NoteDialogState>(NoteDialogState.Closed) }
+    var noteToDelete by remember { mutableStateOf<NoteEntity?>(null) }
 
     LaunchedEffect(Unit) {
         noteViewModel.loadNotes()
@@ -125,7 +127,7 @@ fun NotesScreen(
                                 )
                             },
                             onDeleteClick = {
-                                noteViewModel.deleteNote(note)
+                                noteToDelete = note
                             }
                         )
                     }
@@ -175,6 +177,19 @@ fun NotesScreen(
             )
         }
     }
+
+    noteToDelete?.let { note ->
+        DeleteNoteDialog(
+            noteTitle = note.title,
+            onDismiss = {
+                noteToDelete = null
+            },
+            onConfirmDelete = {
+                noteViewModel.deleteNote(note)
+                noteToDelete = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -197,7 +212,7 @@ private fun NotesHeader(navController: NavController) {
             )
 
             Text(
-                text = "Save reminders, instructions, and health details",
+                text = "Save health details, instructions, and observations",
                 style = MaterialTheme.typography.bodySmall,
                 color = SoftText,
                 maxLines = 1,
@@ -225,7 +240,7 @@ private fun SearchField(
             )
         },
         singleLine = true,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MedGreen,
             unfocusedBorderColor = SoftBorder,
@@ -245,13 +260,30 @@ private fun NoteCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp),
         border = BorderStroke(1.dp, SoftBorder)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+
             Row(verticalAlignment = Alignment.Top) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color(0xFFE6F7F3), RoundedCornerShape(15.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.NoteAlt,
+                        contentDescription = null,
+                        tint = MedGreen,
+                        modifier = Modifier.size(25.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (note.isPinned) {
@@ -259,10 +291,10 @@ private fun NoteCard(
                                 imageVector = Icons.Filled.PushPin,
                                 contentDescription = null,
                                 tint = MedGreen,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(17.dp)
                             )
 
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
                         }
 
                         Text(
@@ -275,7 +307,7 @@ private fun NoteCard(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(5.dp))
 
                     Text(
                         text = note.content,
@@ -285,35 +317,47 @@ private fun NoteCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-
-                Row {
-                    IconButton(onClick = onEditClick) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Edit Note", tint = MedGreen)
-                    }
-
-                    IconButton(onClick = onPinClick) {
-                        Icon(
-                            imageVector = Icons.Filled.PushPin,
-                            contentDescription = "Pin Note",
-                            tint = if (note.isPinned) MedGreen else SoftText
-                        )
-                    }
-
-                    IconButton(onClick = onDeleteClick) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete Note", tint = Color(0xFFEF4444))
-                    }
-                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CategoryChip(note.category)
 
                 Spacer(modifier = Modifier.weight(1f))
 
+                IconButton(onClick = onEditClick) {
+                    Icon(
+                        Icons.Filled.Edit,
+                        contentDescription = "Edit Note",
+                        tint = MedGreen
+                    )
+                }
+
+                IconButton(onClick = onPinClick) {
+                    Icon(
+                        Icons.Filled.PushPin,
+                        contentDescription = "Pin Note",
+                        tint = if (note.isPinned) MedGreen else SoftText
+                    )
+                }
+
+                IconButton(onClick = onDeleteClick) {
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = "Delete Note",
+                        tint = ErrorRed
+                    )
+                }
+            }
+
+            val dateTimeText = buildDateTimeText(note.noteDate, note.noteTime)
+
+            if (dateTimeText.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+
                 Text(
-                    text = "${note.noteDate} • ${note.noteTime}",
+                    text = dateTimeText,
                     style = MaterialTheme.typography.labelSmall,
                     color = SoftText,
                     maxLines = 1,
@@ -344,14 +388,21 @@ private fun EmptyNotesView() {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Filled.NoteAlt,
-                contentDescription = null,
-                modifier = Modifier.size(70.dp),
-                tint = MedGreen
-            )
+            Box(
+                modifier = Modifier
+                    .size(86.dp)
+                    .background(Color(0xFFE6F7F3), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.NoteAlt,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MedGreen
+                )
+            }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Text(
                 text = "No medical notes yet",
@@ -361,7 +412,7 @@ private fun EmptyNotesView() {
             )
 
             Text(
-                text = "Tap + to add reminders, dates, and instructions.",
+                text = "Tap + to add notes, instructions, and observations.",
                 color = SoftText,
                 style = MaterialTheme.typography.bodySmall
             )
@@ -392,12 +443,21 @@ private fun AddEditNoteDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(24.dp),
         title = {
-            Text(
-                text = if (existingNote == null) "Add Medical Note" else "Edit Medical Note",
-                fontWeight = FontWeight.Bold,
-                color = DarkText
-            )
+            Column {
+                Text(
+                    text = if (existingNote == null) "Add Medical Note" else "Edit Medical Note",
+                    fontWeight = FontWeight.Bold,
+                    color = DarkText
+                )
+
+                Text(
+                    text = "Date and time are optional for notes.",
+                    color = SoftText,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         },
         text = {
             Column {
@@ -408,9 +468,10 @@ private fun AddEditNoteDialog(
                         error = ""
                     },
                     label = { Text("Note Title") },
+                    placeholder = { Text("e.g., Doctor instruction") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(13.dp)
+                    shape = RoundedCornerShape(15.dp)
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -422,14 +483,23 @@ private fun AddEditNoteDialog(
                         error = ""
                     },
                     label = { Text("Note Details") },
+                    placeholder = { Text("Write the health note here...") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp),
-                    maxLines = 5,
-                    shape = RoundedCornerShape(13.dp)
+                        .height(130.dp),
+                    maxLines = 6,
+                    shape = RoundedCornerShape(15.dp)
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Optional Date & Time",
+                    fontWeight = FontWeight.SemiBold,
+                    color = DarkText
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Box(modifier = Modifier.weight(1f)) {
@@ -442,7 +512,7 @@ private fun AddEditNoteDialog(
                                 Icon(Icons.Default.CalendarMonth, contentDescription = null)
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(13.dp)
+                            shape = RoundedCornerShape(15.dp)
                         )
 
                         Box(
@@ -462,7 +532,7 @@ private fun AddEditNoteDialog(
                                 Icon(Icons.Default.AccessTime, contentDescription = null)
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(13.dp)
+                            shape = RoundedCornerShape(15.dp)
                         )
 
                         Box(
@@ -481,9 +551,22 @@ private fun AddEditNoteDialog(
                     TextButton(onClick = { showTimePicker = true }) {
                         Text("Choose Time")
                     }
+
+                    TextButton(
+                        onClick = {
+                            noteDate = ""
+                            noteTime = ""
+                        }
+                    ) {
+                        Text("Clear")
+                    }
                 }
 
-                Text("Category", fontWeight = FontWeight.SemiBold, color = DarkText)
+                Text(
+                    text = "Category",
+                    fontWeight = FontWeight.SemiBold,
+                    color = DarkText
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -514,8 +597,8 @@ private fun AddEditNoteDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (title.isBlank() || content.isBlank() || noteDate.isBlank() || noteTime.isBlank()) {
-                        error = "Please complete all note fields."
+                    if (title.isBlank() || content.isBlank()) {
+                        error = "Please enter a title and note details."
                     } else {
                         onSave(
                             title.trim(),
@@ -593,6 +676,53 @@ private fun AddEditNoteDialog(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun DeleteNoteDialog(
+    noteTitle: String,
+    onDismiss: () -> Unit,
+    onConfirmDelete: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(22.dp),
+        title = {
+            Text(
+                text = "Delete Note?",
+                fontWeight = FontWeight.Bold,
+                color = DarkText
+            )
+        },
+        text = {
+            Text(
+                text = "Are you sure you want to delete \"$noteTitle\"? This action cannot be undone.",
+                color = SoftText
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirmDelete,
+                colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)
+            ) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+private fun buildDateTimeText(date: String, time: String): String {
+    return when {
+        date.isNotBlank() && time.isNotBlank() -> "$date • $time"
+        date.isNotBlank() -> date
+        time.isNotBlank() -> time
+        else -> ""
     }
 }
 
