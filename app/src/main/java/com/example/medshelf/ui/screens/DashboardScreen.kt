@@ -44,7 +44,7 @@ fun DashboardScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
-        bottomBar = { DashboardBottomBar(navController) }
+        bottomBar = { MedShelfBottomBar(navController) }
     ) { paddingValues ->
 
         Box(
@@ -825,85 +825,5 @@ private fun DocumentRow(
             contentDescription = null,
             tint = SoftText
         )
-    }
-}
-
-@Composable
-private fun DashboardBottomBar(navController: NavController) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(86.dp),
-        color = Color.White,
-        shadowElevation = 10.dp,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            BottomItem("Home", Icons.Outlined.Home, true) {
-                navController.navigate("dashboard")
-            }
-
-            BottomItem("Documents", Icons.Outlined.Folder, false) {
-                navController.navigate("document_library")
-            }
-
-            Box(
-                modifier = Modifier
-                    .size(54.dp)
-                    .background(MedGreen, CircleShape)
-                    .clickable { navController.navigate("add_document") },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(31.dp)
-                )
-            }
-
-            BottomItem("Reminders", Icons.Outlined.Notifications, false) {
-                navController.navigate("reminders")
-            }
-
-            BottomItem("Profile", Icons.Outlined.AccountCircle, false) {
-                navController.navigate("edit_profile")
-            }
-        }
-    }
-}
-
-@Composable
-private fun BottomItem(
-    label: String,
-    icon: ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    TextButton(
-        onClick = onClick,
-        contentPadding = PaddingValues(0.dp)
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (selected) MedGreen else SoftText,
-                modifier = Modifier.size(21.dp)
-            )
-
-            Text(
-                text = label,
-                color = if (selected) MedGreen else SoftText,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-            )
-        }
     }
 }
