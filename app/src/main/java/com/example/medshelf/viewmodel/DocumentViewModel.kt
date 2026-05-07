@@ -52,6 +52,12 @@ class DocumentViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun updateDocument(document: DocumentEntity) {
+        viewModelScope.launch {
+            documentDao.updateDocument(document)
+        }
+    }
+
     fun loadDocumentById(documentId: Int) {
         viewModelScope.launch {
             selectedDocument.value = documentDao.getDocumentById(documentId)

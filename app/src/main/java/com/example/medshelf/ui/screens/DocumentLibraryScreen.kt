@@ -1,5 +1,6 @@
 package com.example.medshelf.ui.screens
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Biotech
@@ -23,28 +25,51 @@ import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NoteAlt
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Vaccines
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.*
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.example.medshelf.model.DocumentEntity
 import com.example.medshelf.viewmodel.DocumentViewModel
 
 private val MedGreen = Color(0xFF009688)
 private val DarkText = Color(0xFF111827)
 private val SoftText = Color(0xFF64748B)
 private val SoftBorder = Color(0xFFE2E8F0)
+private val ErrorRed = Color(0xFFEF4444)
 
 @Composable
 fun DocumentLibraryScreen(
@@ -52,15 +77,16 @@ fun DocumentLibraryScreen(
     documentViewModel: DocumentViewModel
 ) {
     val documents by documentViewModel.documents.collectAsState()
-    val selectedFilter = remember { mutableStateOf("All") }
-    var documentToDelete by remember { mutableStateOf<com.example.medshelf.model.DocumentEntity?>(null) }
+
+    var selectedFilter by remember { mutableStateOf("All") }
+    var documentToDelete by remember { mutableStateOf<DocumentEntity?>(null) }
 
     val categories = documentCategories()
 
-    val filteredDocuments = if (selectedFilter.value == "All") {
+    val filteredDocuments = if (selectedFilter == "All") {
         documents
     } else {
-        documents.filter { it.type.equals(selectedFilter.value, ignoreCase = true) }
+        documents.filter { it.type.equals(selectedFilter, ignoreCase = true) }
     }
 
     Scaffold(
@@ -80,51 +106,15 @@ fun DocumentLibraryScreen(
                 containerColor = MedGreen,
                 contentColor = Color.White
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Document")
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Document"
+                )
             }
         },
         containerColor = Color.Transparent
-    )
+    ) { paddingValues ->
 
-    { paddingValues ->
-        documentToDelete?.let { document ->
-            AlertDialog(
-                onDismissRequest = {
-                    documentToDelete = null
-                },
-                title = {
-                    Text(
-                        text = "Delete Document",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                text = {
-                    Text("Are you sure you want to delete \"${document.name}\"?")
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            documentViewModel.deleteDocument(document)
-                            documentToDelete = null
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFEF4444)
-                        )
-                    ) {
-                        Text("Delete")
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = {
-                            documentToDelete = null
-                        }
-                    ) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -145,15 +135,15 @@ fun DocumentLibraryScreen(
 
             CategorySection(
                 categories = categories,
-                selectedFilter = selectedFilter.value,
-                onSelect = { selectedFilter.value = it }
+                selectedFilter = selectedFilter,
+                onSelect = { selectedFilter = it }
             )
 
             Spacer(modifier = Modifier.height(14.dp))
 
             if (filteredDocuments.isEmpty()) {
                 EmptyDocumentState(
-                    selectedFilter = selectedFilter.value,
+                    selectedFilter = selectedFilter,
                     onAddClick = { navController.navigate("add_document") }
                 )
             } else {
@@ -168,21 +158,22 @@ fun DocumentLibraryScreen(
                     ),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(filteredDocuments) { doc ->
+                    items(
+                        items = filteredDocuments,
+                        key = { it.id }
+                    ) { doc ->
                         DocumentGridItem(
                             title = doc.name,
                             type = doc.type,
                             owner = doc.owner,
                             date = doc.date,
-
+                            fileUri = doc.fileUri,
                             onClick = {
                                 navController.navigate("document_details/${doc.id}")
                             },
-
                             onEditClick = {
-                                navController.navigate("document_details/${doc.id}")
+                                navController.navigate("edit_document/${doc.id}")
                             },
-
                             onDeleteClick = {
                                 documentToDelete = doc
                             }
@@ -197,7 +188,57 @@ fun DocumentLibraryScreen(
                 }
             }
         }
+
+        documentToDelete?.let { document ->
+            DeleteDocumentDialog(
+                document = document,
+                onDismiss = {
+                    documentToDelete = null
+                },
+                onConfirmDelete = {
+                    documentViewModel.deleteDocument(document)
+                    documentToDelete = null
+                }
+            )
+        }
     }
+}
+
+@Composable
+private fun DeleteDocumentDialog(
+    document: DocumentEntity,
+    onDismiss: () -> Unit,
+    onConfirmDelete: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Delete Document",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Text("Are you sure you want to delete \"${document.name}\"?")
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirmDelete,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = ErrorRed
+                )
+            ) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -210,8 +251,12 @@ private fun LibraryHeader(
             .padding(horizontal = 20.dp)
             .padding(top = 16.dp, bottom = 12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
                     text = "Medical Documents",
                     style = MaterialTheme.typography.titleLarge,
@@ -237,7 +282,9 @@ private fun LibraryHeader(
                 border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder),
                 shadowElevation = 1.dp
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
@@ -287,7 +334,7 @@ private fun CategorySection(
     }
 }
 
-data class CategoryItem(
+private data class CategoryItem(
     val label: String,
     val icon: ImageVector,
     val color: Color
@@ -312,7 +359,7 @@ private fun documentCategories(): List<CategoryItem> {
 }
 
 @Composable
-fun CategoryCapsule(
+private fun CategoryCapsule(
     label: String,
     icon: ImageVector,
     accentColor: Color,
@@ -356,11 +403,12 @@ fun CategoryCapsule(
 }
 
 @Composable
-fun DocumentGridItem(
+private fun DocumentGridItem(
     title: String,
     type: String,
     owner: String,
     date: String,
+    fileUri: String,
     onClick: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
@@ -388,97 +436,18 @@ fun DocumentGridItem(
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Box {
-                    Box(
-                        modifier = Modifier
-                            .size(58.dp)
-                            .background(
-                                color = accent.copy(alpha = 0.12f),
-                                shape = PaperFoldShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = accent,
-                            modifier = Modifier.size(29.dp)
-                        )
-                    }
+                DocumentPreviewBox(
+                    fileUri = fileUri,
+                    type = type,
+                    accent = accent,
+                    icon = icon
+                )
 
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .offset(x = 8.dp, y = 6.dp),
-                        shape = RoundedCornerShape(6.dp),
-                        color = accent
-                    ) {
-                        Text(
-                            text = "FILE",
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                var menuExpanded by remember { mutableStateOf(false) }
-
-                Box {
-                    IconButton(
-                        onClick = {
-                            menuExpanded = true
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More",
-                            tint = SoftText,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = menuExpanded,
-                        onDismissRequest = {
-                            menuExpanded = false
-                        }
-                    ) {
-
-                        DropdownMenuItem(
-                            text = {
-                                Text("View Details")
-                            },
-                            onClick = {
-                                menuExpanded = false
-                                onClick()
-                            }
-                        )
-
-                        DropdownMenuItem(
-                            text = {
-                                Text("Edit")
-                            },
-                            onClick = {
-                                menuExpanded = false
-
-                                onEditClick()
-                            }
-                        )
-
-                        DropdownMenuItem(
-                            text = {
-                                Text("Delete")
-                            },
-                            onClick = {
-                                menuExpanded = false
-
-                                onDeleteClick()
-                            }
-                        )
-                    }
-                }
+                DocumentMoreMenu(
+                    onViewDetails = onClick,
+                    onEdit = onEditClick,
+                    onDelete = onDeleteClick
+                )
             }
 
             Spacer(modifier = Modifier.height(18.dp))
@@ -544,7 +513,124 @@ fun DocumentGridItem(
 }
 
 @Composable
-fun AddDocumentGridItem(onClick: () -> Unit) {
+private fun DocumentPreviewBox(
+    fileUri: String,
+    type: String,
+    accent: Color,
+    icon: ImageVector
+) {
+    val imageFile = isImageFile(fileUri)
+
+    Box {
+        if (imageFile) {
+            AsyncImage(
+                model = Uri.parse(fileUri),
+                contentDescription = type,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(58.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        color = accent.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(58.dp)
+                    .background(
+                        color = accent.copy(alpha = 0.12f),
+                        shape = PaperFoldShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(29.dp)
+                )
+            }
+        }
+
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 8.dp, y = 6.dp),
+            shape = RoundedCornerShape(6.dp),
+            color = accent
+        ) {
+            Text(
+                text = if (imageFile) "IMG" else "FILE",
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                color = Color.White,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun DocumentMoreMenu(
+    onViewDetails: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(
+            onClick = {
+                menuExpanded = true
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "More",
+                tint = SoftText,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = {
+                menuExpanded = false
+            }
+        ) {
+            DropdownMenuItem(
+                text = { Text("View Details") },
+                onClick = {
+                    menuExpanded = false
+                    onViewDetails()
+                }
+            )
+
+            DropdownMenuItem(
+                text = { Text("Edit") },
+                onClick = {
+                    menuExpanded = false
+                    onEdit()
+                }
+            )
+
+            DropdownMenuItem(
+                text = { Text("Delete") },
+                onClick = {
+                    menuExpanded = false
+                    onDelete()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddDocumentGridItem(
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -559,7 +645,9 @@ fun AddDocumentGridItem(onClick: () -> Unit) {
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = MedGreen.copy(alpha = 0.12f)
@@ -616,7 +704,11 @@ private fun EmptyDocumentState(
         Spacer(modifier = Modifier.height(18.dp))
 
         Text(
-            text = if (selectedFilter == "All") "No documents yet" else "No $selectedFilter documents",
+            text = if (selectedFilter == "All") {
+                "No documents yet"
+            } else {
+                "No $selectedFilter documents"
+            },
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = DarkText
@@ -637,14 +729,19 @@ private fun EmptyDocumentState(
             colors = ButtonDefaults.buttonColors(containerColor = MedGreen),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Icon(Icons.Default.Add, contentDescription = null)
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null
+            )
+
             Spacer(modifier = Modifier.width(8.dp))
+
             Text("Add Document")
         }
     }
 }
 
-val PaperFoldShape: Shape = GenericShape { size, _ ->
+private val PaperFoldShape: Shape = GenericShape { size, _ ->
     val fold = size.width * 0.28f
 
     moveTo(0f, 0f)
@@ -655,7 +752,17 @@ val PaperFoldShape: Shape = GenericShape { size, _ ->
     close()
 }
 
-fun categoryIcon(type: String): ImageVector {
+private fun isImageFile(fileUri: String): Boolean {
+    val lowerUri = fileUri.lowercase()
+
+    return lowerUri.contains("image") ||
+            lowerUri.endsWith(".jpg") ||
+            lowerUri.endsWith(".jpeg") ||
+            lowerUri.endsWith(".png") ||
+            lowerUri.endsWith(".webp")
+}
+
+private fun categoryIcon(type: String): ImageVector {
     return when {
         type.contains("Lab", ignoreCase = true) -> Icons.Default.Biotech
         type.contains("Prescription", ignoreCase = true) -> Icons.Default.Medication
@@ -672,7 +779,7 @@ fun categoryIcon(type: String): ImageVector {
     }
 }
 
-fun categoryColor(type: String): Color {
+private fun categoryColor(type: String): Color {
     return when {
         type.contains("Lab", ignoreCase = true) -> Color(0xFF0EA5E9)
         type.contains("Prescription", ignoreCase = true) -> Color(0xFF7C3AED)

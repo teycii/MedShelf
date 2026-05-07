@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MedShelfApp(database: AppDatabase) {
+
     val navController = rememberNavController()
 
     val documentViewModel: DocumentViewModel = viewModel()
@@ -51,7 +52,9 @@ fun MedShelfApp(database: AppDatabase) {
         navController = navController,
         startDestination = "loading"
     ) {
+
         composable("loading") {
+
             LaunchedEffect(Unit) {
                 userViewModel.loadUser()
             }
@@ -60,14 +63,19 @@ fun MedShelfApp(database: AppDatabase) {
             val user = userViewModel.user.value
 
             LaunchedEffect(isLoaded, user) {
+
                 if (isLoaded) {
+
                     if (user == null) {
+
                         navController.navigate("registration") {
                             popUpTo("loading") {
                                 inclusive = true
                             }
                         }
+
                     } else {
+
                         navController.navigate("dashboard") {
                             popUpTo("loading") {
                                 inclusive = true
@@ -86,6 +94,7 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("registration") {
+
             RegistrationScreen(
                 navController = navController,
                 userViewModel = userViewModel
@@ -93,6 +102,7 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("dashboard") {
+
             DashboardScreen(
                 navController = navController,
                 userViewModel = userViewModel
@@ -100,6 +110,7 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("document_library") {
+
             DocumentLibraryScreen(
                 navController = navController,
                 documentViewModel = documentViewModel
@@ -107,27 +118,15 @@ fun MedShelfApp(database: AppDatabase) {
         }
 
         composable("add_document") {
+
             AddDocumentScreen(
                 navController = navController,
                 documentViewModel = documentViewModel
             )
         }
 
-        composable("emergency_snapshot") {
-            EmergencySnapshotScreen(
-                navController = navController,
-                userViewModel = userViewModel
-            )
-        }
-
-        composable("edit_profile") {
-            EditProfileScreen(
-                navController = navController,
-                userViewModel = userViewModel
-            )
-        }
-
         composable("document_details/{documentId}") { backStackEntry ->
+
             val documentId = backStackEntry.arguments
                 ?.getString("documentId")
                 ?.toIntOrNull() ?: 0
@@ -139,13 +138,44 @@ fun MedShelfApp(database: AppDatabase) {
             )
         }
 
+        composable("edit_document/{documentId}") { backStackEntry ->
+
+            val documentId = backStackEntry.arguments
+                ?.getString("documentId")
+                ?.toIntOrNull() ?: 0
+
+            EditDocumentScreen(
+                navController = navController,
+                documentViewModel = documentViewModel,
+                documentId = documentId
+            )
+        }
+
+        composable("emergency_snapshot") {
+
+            EmergencySnapshotScreen(
+                navController = navController,
+                userViewModel = userViewModel
+            )
+        }
+
+        composable("edit_profile") {
+
+            EditProfileScreen(
+                navController = navController,
+                userViewModel = userViewModel
+            )
+        }
+
         composable("reminders") {
+
             RemindersScreen(
                 navController = navController
             )
         }
 
         composable("notes") {
+
             NotesScreen(
                 navController = navController
             )
