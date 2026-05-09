@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.example.medshelf">
 
     <!-- CAMERA -->
@@ -12,6 +13,12 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Required for foreground services on all supported Android versions -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Required for specific service types on Android 14+ -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" tools:targetApi="34" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -23,9 +30,10 @@
         <!-- CAMERA FILE PROVIDER -->
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
+            android:authorities="${applicationId}.medshelf.provider"
             android:exported="false"
-            android:grantUriPermissions="true">
+            android:grantUriPermissions="true"
+            tools:ignore="SpellCheckingInspection">
 
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
@@ -36,6 +44,12 @@
         <receiver
             android:name=".reminder.ReminderNotificationReceiver"
             android:exported="false" />
+
+        <!-- REMINDER ALARM SERVICE -->
+        <service
+            android:name=".reminder.ReminderAlarmService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <!-- SPLASH SCREEN -->
         <activity

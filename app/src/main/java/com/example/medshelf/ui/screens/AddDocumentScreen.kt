@@ -696,7 +696,7 @@ private fun createCameraImageUri(context: Context): Uri {
 
     return FileProvider.getUriForFile(
         context,
-        "${context.packageName}.fileprovider",
+        "${context.packageName}.medshelf.provider",
         imageFile
     )
 }

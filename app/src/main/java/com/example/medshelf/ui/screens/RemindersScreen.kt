@@ -53,9 +53,12 @@ private val SoftBorder = Color(0xFFE2E8F0)
 private val Purple = Color(0xFF7C3AED)
 private val Orange = Color(0xFFF59E0B)
 private val ErrorRed = Color(0xFFEF4444)
+private val SuccessGreen = Color(0xFF16A34A)
 
 private const val SCHEDULE_DATE_TIME = "DATE_TIME"
 private const val SCHEDULE_INTERVAL = "INTERVAL"
+private const val STATUS_COMPLETED = "Completed"
+private const val STATUS_SCHEDULED = "Scheduled"
 
 @Composable
 fun RemindersScreen(
@@ -78,7 +81,7 @@ fun RemindersScreen(
         }
     }
 
-    val activeReminders = reminders.filter { it.status != "Completed" }
+    val activeReminders = reminders.filter { it.status != STATUS_COMPLETED }
     val nextReminder = activeReminders.firstOrNull()
 
     Scaffold(
@@ -101,7 +104,10 @@ fun RemindersScreen(
                 containerColor = MedGreen,
                 contentColor = Color.White
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add Reminder")
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Add Reminder"
+                )
             }
         },
         containerColor = Color.Transparent
@@ -112,7 +118,11 @@ fun RemindersScreen(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color.White, Color(0xFFF9FFFC), Color(0xFFEFFFF8))
+                        listOf(
+                            Color.White,
+                            Color(0xFFF9FFFC),
+                            Color(0xFFEFFFF8)
+                        )
                     )
                 )
                 .padding(paddingValues),
@@ -161,6 +171,9 @@ fun RemindersScreen(
                         },
                         onComplete = {
                             reminderViewModel.markComplete(reminder)
+                        },
+                        onRestore = {
+                            reminderViewModel.markActive(reminder)
                         }
                     )
                 }
@@ -216,7 +229,10 @@ private fun DeleteReminderDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Delete Reminder", fontWeight = FontWeight.Bold)
+            Text(
+                text = "Delete Reminder",
+                fontWeight = FontWeight.Bold
+            )
         },
         text = {
             Text("Are you sure you want to delete \"${reminder.title}\"?")
@@ -337,7 +353,8 @@ private fun ReminderCard(
     reminder: ReminderEntity,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onComplete: () -> Unit
+    onComplete: () -> Unit,
+    onRestore: () -> Unit
 ) {
     val menuExpanded = remember { mutableStateOf(false) }
 
@@ -390,7 +407,7 @@ private fun ReminderCard(
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                StatusChip(reminder.status)
+                StatusChip(status = reminder.status)
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -424,9 +441,14 @@ private fun ReminderCard(
                         }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Edit") },
+                            text = {
+                                Text("Edit Reminder")
+                            },
                             leadingIcon = {
-                                Icon(Icons.Filled.Edit, contentDescription = null)
+                                Icon(
+                                    imageVector = Icons.Filled.Edit,
+                                    contentDescription = null
+                                )
                             },
                             onClick = {
                                 menuExpanded.value = false
@@ -434,23 +456,59 @@ private fun ReminderCard(
                             }
                         )
 
-                        if (reminder.status != "Completed") {
-                            DropdownMenuItem(
-                                text = { Text("Mark Complete") },
-                                leadingIcon = {
-                                    Icon(Icons.Filled.CheckCircle, contentDescription = null)
-                                },
-                                onClick = {
-                                    menuExpanded.value = false
-                                    onComplete()
-                                }
-                            )
-                        }
+                        HorizontalDivider()
 
                         DropdownMenuItem(
-                            text = { Text("Delete") },
+                            text = {
+                                Text(
+                                    if (reminder.status == STATUS_COMPLETED) {
+                                        "Mark as Active"
+                                    } else {
+                                        "Mark as Completed"
+                                    }
+                                )
+                            },
                             leadingIcon = {
-                                Icon(Icons.Filled.Delete, contentDescription = null)
+                                Icon(
+                                    imageVector = if (reminder.status == STATUS_COMPLETED) {
+                                        Icons.Filled.Notifications
+                                    } else {
+                                        Icons.Filled.CheckCircle
+                                    },
+                                    contentDescription = null,
+                                    tint = if (reminder.status == STATUS_COMPLETED) {
+                                        MedGreen
+                                    } else {
+                                        SuccessGreen
+                                    }
+                                )
+                            },
+                            onClick = {
+                                menuExpanded.value = false
+
+                                if (reminder.status == STATUS_COMPLETED) {
+                                    onRestore()
+                                } else {
+                                    onComplete()
+                                }
+                            }
+                        )
+
+                        HorizontalDivider()
+
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = "Delete Reminder",
+                                    color = ErrorRed
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Filled.Delete,
+                                    contentDescription = null,
+                                    tint = ErrorRed
+                                )
                             },
                             onClick = {
                                 menuExpanded.value = false
@@ -507,11 +565,11 @@ private fun ReminderIcon(status: String) {
     val color = when (status) {
         "Due soon" -> Purple
         "Upcoming" -> Orange
-        "Completed" -> MedGreen
+        STATUS_COMPLETED -> MedGreen
         else -> MedGreen
     }
 
-    val icon = if (status == "Completed") {
+    val icon = if (status == STATUS_COMPLETED) {
         Icons.Filled.CheckCircle
     } else {
         Icons.Filled.Medication
@@ -562,7 +620,7 @@ private fun StatusChip(status: String) {
     val color = when (status) {
         "Due soon" -> Purple
         "Upcoming" -> Orange
-        "Completed" -> MedGreen
+        STATUS_COMPLETED -> MedGreen
         else -> MedGreen
     }
 
@@ -679,7 +737,7 @@ private fun AddEditReminderDialog(
                         value = if (scheduleType.value == SCHEDULE_DATE_TIME) {
                             "Specific Date & Time"
                         } else {
-                            "Every X Hours"
+                            "Every _ Hours"
                         },
                         onValueChange = {},
                         readOnly = true,
@@ -961,7 +1019,7 @@ private fun AddEditReminderDialog(
                                     } else {
                                         repeat.value
                                     },
-                                    status = existingReminder?.status ?: "Scheduled",
+                                    status = existingReminder?.status ?: STATUS_SCHEDULED,
                                     scheduleType = scheduleType.value,
                                     intervalHours = if (scheduleType.value == SCHEDULE_INTERVAL) {
                                         interval

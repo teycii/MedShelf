@@ -18,10 +18,7 @@ object ReminderAlarmScheduler {
 
         val intent = Intent(context, ReminderNotificationReceiver::class.java).apply {
             putExtra("title", reminder.title)
-            putExtra(
-                "message",
-                "${reminder.time} • ${reminder.profile}${if (reminder.note.isNotBlank()) " • ${reminder.note}" else ""}"
-            )
+            putExtra("message", buildReminderMessage(reminder))
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -54,5 +51,16 @@ object ReminderAlarmScheduler {
         )
 
         alarmManager.cancel(pendingIntent)
+    }
+
+    private fun buildReminderMessage(reminder: ReminderEntity): String {
+        val scheduleText = if (reminder.scheduleType == "INTERVAL") {
+            "Every ${reminder.intervalHours} hour(s)"
+        } else {
+            "${reminder.date}, ${reminder.time}"
+        }
+
+        return "$scheduleText • ${reminder.profile}" +
+                if (reminder.note.isNotBlank()) " • ${reminder.note}" else ""
     }
 }

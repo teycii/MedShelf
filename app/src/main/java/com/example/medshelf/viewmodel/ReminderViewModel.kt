@@ -13,8 +13,10 @@ import kotlinx.coroutines.launch
 
 class ReminderViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val appContext = getApplication<Application>()
+
     private val reminderDao =
-        AppDatabase.getDatabase(application).reminderDao()
+        AppDatabase.getDatabase(appContext).reminderDao()
 
     val reminders: StateFlow<List<ReminderEntity>> =
         reminderDao.getAllReminders()
@@ -30,8 +32,8 @@ class ReminderViewModel(application: Application) : AndroidViewModel(application
             val savedReminder = reminder.copy(id = newId)
 
             ReminderAlarmScheduler.scheduleReminder(
-                getApplication(),
-                savedReminder
+                context = appContext,
+                reminder = savedReminder
             )
         }
     }
@@ -40,23 +42,30 @@ class ReminderViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             reminderDao.updateReminder(reminder)
 
-            ReminderAlarmScheduler.cancelReminder(
-                getApplication(),
-                reminder
-            )
+            if (reminder.status == "Completed") {
+                ReminderAlarmScheduler.cancelReminder(
+                    context = appContext,
+                    reminder = reminder
+                )
+            } else {
+                ReminderAlarmScheduler.cancelReminder(
+                    context = appContext,
+                    reminder = reminder
+                )
 
-            ReminderAlarmScheduler.scheduleReminder(
-                getApplication(),
-                reminder
-            )
+                ReminderAlarmScheduler.scheduleReminder(
+                    context = appContext,
+                    reminder = reminder
+                )
+            }
         }
     }
 
     fun deleteReminder(reminder: ReminderEntity) {
         viewModelScope.launch {
             ReminderAlarmScheduler.cancelReminder(
-                getApplication(),
-                reminder
+                context = appContext,
+                reminder = reminder
             )
 
             reminderDao.deleteReminder(reminder)
@@ -68,11 +77,24 @@ class ReminderViewModel(application: Application) : AndroidViewModel(application
             val completedReminder = reminder.copy(status = "Completed")
 
             ReminderAlarmScheduler.cancelReminder(
-                getApplication(),
-                reminder
+                context = appContext,
+                reminder = reminder
             )
 
             reminderDao.updateReminder(completedReminder)
+        }
+    }
+
+    fun markActive(reminder: ReminderEntity) {
+        viewModelScope.launch {
+            val activeReminder = reminder.copy(status = "Scheduled")
+
+            reminderDao.updateReminder(activeReminder)
+
+            ReminderAlarmScheduler.scheduleReminder(
+                context = appContext,
+                reminder = activeReminder
+            )
         }
     }
 }
