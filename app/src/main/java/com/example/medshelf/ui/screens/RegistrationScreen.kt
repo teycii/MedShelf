@@ -19,13 +19,28 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Sick
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -33,6 +48,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.medshelf.R
@@ -61,18 +78,48 @@ fun RegistrationScreen(
 
     var showErrors by remember { mutableStateOf(false) }
 
-    val firstNameError by remember { derivedStateOf { showErrors && firstName.isBlank() } }
-    val lastNameError by remember { derivedStateOf { showErrors && lastName.isBlank() } }
-    val ageError by remember { derivedStateOf { showErrors && age.isBlank() } }
-    val bloodTypeError by remember { derivedStateOf { showErrors && bloodType.isBlank() } }
-    val emergencyNameError by remember { derivedStateOf { showErrors && emergencyContactName.isBlank() } }
-    val emergencyNumberError by remember { derivedStateOf { showErrors && emergencyContactNumber.isBlank() } }
+    val nameRegex = Regex("^[A-Za-z ]+$")
+    val phoneRegex = Regex("^09\\d{9}$")
+
+    val validFirstName by remember {
+        derivedStateOf { firstName.trim().matches(nameRegex) }
+    }
+
+    val validLastName by remember {
+        derivedStateOf { lastName.trim().matches(nameRegex) }
+    }
+
+    val validAge by remember {
+        derivedStateOf {
+            age.toIntOrNull()?.let { it in 1..120 } ?: false
+        }
+    }
+
+    val validEmergencyName by remember {
+        derivedStateOf { emergencyContactName.trim().matches(nameRegex) }
+    }
+
+    val validEmergencyNumber by remember {
+        derivedStateOf { emergencyContactNumber.trim().matches(phoneRegex) }
+    }
+
+    val firstNameError = showErrors && !validFirstName
+    val lastNameError = showErrors && !validLastName
+    val ageError = showErrors && !validAge
+    val bloodTypeError = showErrors && bloodType.isBlank()
+    val emergencyNameError = showErrors && !validEmergencyName
+    val emergencyNumberError = showErrors && !validEmergencyNumber
+
+    val formIsValid =
+        validFirstName &&
+                validLastName &&
+                validAge &&
+                bloodType.isNotBlank() &&
+                validEmergencyName &&
+                validEmergencyNumber
 
     Scaffold(
-        containerColor = Color.Transparent,
-        bottomBar = {
-            RegistrationBottomBar(navController)
-        }
+        containerColor = Color.Transparent
     ) { paddingValues ->
 
         Box(
@@ -94,7 +141,7 @@ fun RegistrationScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
-                    .padding(top = 28.dp, bottom = 120.dp),
+                    .padding(top = 28.dp, bottom = 40.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 BrandHeader()
@@ -110,7 +157,7 @@ fun RegistrationScreen(
                         value = firstName,
                         icon = Icons.Outlined.Person,
                         isError = firstNameError,
-                        errorText = "This field is required",
+                        errorText = "Use letters only.",
                         onChange = { firstName = it }
                     )
 
@@ -119,7 +166,7 @@ fun RegistrationScreen(
                         value = lastName,
                         icon = Icons.Outlined.Person,
                         isError = lastNameError,
-                        errorText = "This field is required",
+                        errorText = "Use letters only.",
                         onChange = { lastName = it }
                     )
 
@@ -127,17 +174,15 @@ fun RegistrationScreen(
                         label = "Age",
                         value = age,
                         icon = Icons.Filled.CalendarMonth,
+                        keyboardType = KeyboardType.Number,
                         isError = ageError,
-                        errorText = "This field is required",
-                        onChange = { age = it }
+                        errorText = "Enter a valid age from 1 to 120.",
+                        onChange = { age = it.filter { char -> char.isDigit() } }
                     )
 
-                    ModernInputField(
-                        label = "Blood Type",
+                    BloodTypeDropdown(
                         value = bloodType,
-                        icon = Icons.Filled.Bloodtype,
                         isError = bloodTypeError,
-                        errorText = "This field is required",
                         onChange = { bloodType = it }
                     )
                 }
@@ -177,7 +222,7 @@ fun RegistrationScreen(
                         value = emergencyContactName,
                         icon = Icons.Outlined.Person,
                         isError = emergencyNameError,
-                        errorText = "This field is required",
+                        errorText = "Use letters only.",
                         onChange = { emergencyContactName = it }
                     )
 
@@ -185,9 +230,14 @@ fun RegistrationScreen(
                         label = "Contact Number",
                         value = emergencyContactNumber,
                         icon = Icons.Filled.Phone,
+                        keyboardType = KeyboardType.Phone,
                         isError = emergencyNumberError,
-                        errorText = "This field is required",
-                        onChange = { emergencyContactNumber = it }
+                        errorText = "Use PH mobile format: 09XXXXXXXXX.",
+                        onChange = {
+                            emergencyContactNumber = it
+                                .filter { char -> char.isDigit() }
+                                .take(11)
+                        }
                     )
                 }
 
@@ -206,28 +256,23 @@ fun RegistrationScreen(
                     onClick = {
                         showErrors = true
 
-                        if (
-                            firstName.isNotBlank() &&
-                            lastName.isNotBlank() &&
-                            age.isNotBlank() &&
-                            bloodType.isNotBlank() &&
-                            emergencyContactName.isNotBlank() &&
-                            emergencyContactNumber.isNotBlank()
-                        ) {
+                        if (formIsValid) {
                             userViewModel.saveUser(
-                                firstName = firstName,
-                                lastName = lastName,
-                                age = age.toIntOrNull() ?: 0,
-                                bloodType = bloodType,
+                                firstName = firstName.trim(),
+                                lastName = lastName.trim(),
+                                age = age.toInt(),
+                                bloodType = bloodType.trim(),
                                 allergies = allergies.ifBlank { "None" },
                                 conditions = conditions.ifBlank { "None" },
                                 medications = medications.ifBlank { "None" },
-                                emergencyContactName = emergencyContactName,
-                                emergencyContactNumber = emergencyContactNumber
+                                emergencyContactName = emergencyContactName.trim(),
+                                emergencyContactNumber = emergencyContactNumber.trim()
                             )
 
                             navController.navigate("dashboard") {
-                                popUpTo("registration") { inclusive = true }
+                                popUpTo("registration") {
+                                    inclusive = true
+                                }
                             }
                         }
                     },
@@ -443,11 +488,113 @@ private fun RegistrationSection(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BloodTypeDropdown(
+    value: String,
+    isError: Boolean,
+    onChange: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val bloodTypes = listOf(
+        "A+",
+        "A-",
+        "B+",
+        "B-",
+        "AB+",
+        "AB-",
+        "O+",
+        "O-"
+    )
+
+    Column {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = {
+                expanded = !expanded
+            }
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = {},
+                readOnly = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(58.dp)
+                    .menuAnchor(
+                        type = MenuAnchorType.PrimaryNotEditable,
+                        enabled = true
+                    ),
+                placeholder = {
+                    Text(
+                        text = "Blood Type",
+                        color = SoftText
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Bloodtype,
+                        contentDescription = null,
+                        tint = SoftText,
+                        modifier = Modifier.size(22.dp)
+                    )
+                },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(
+                        expanded = expanded
+                    )
+                },
+                singleLine = true,
+                isError = isError,
+                shape = RoundedCornerShape(13.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = if (isError) ErrorRed else MedGreen,
+                    unfocusedBorderColor = if (isError) ErrorRed else SoftBorder,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    errorBorderColor = ErrorRed,
+                    cursorColor = MedGreen
+                )
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = {
+                    expanded = false
+                }
+            ) {
+                bloodTypes.forEach { item ->
+                    DropdownMenuItem(
+                        text = { Text(item) },
+                        onClick = {
+                            onChange(item)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        if (isError) {
+            Spacer(modifier = Modifier.height(5.dp))
+
+            Text(
+                text = "Please select a blood type.",
+                color = ErrorRed,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+    }
+}
+
 @Composable
 private fun ModernInputField(
     label: String,
     value: String,
     icon: ImageVector,
+    keyboardType: KeyboardType = KeyboardType.Text,
     isError: Boolean = false,
     errorText: String = "",
     onChange: (String) -> Unit
@@ -474,6 +621,9 @@ private fun ModernInputField(
                 )
             },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = keyboardType
+            ),
             isError = isError,
             shape = RoundedCornerShape(13.dp),
             colors = OutlinedTextFieldDefaults.colors(
@@ -525,86 +675,9 @@ private fun ErrorBox() {
         Spacer(modifier = Modifier.width(10.dp))
 
         Text(
-            text = "Please fill in all required fields.",
+            text = "Please correct the highlighted fields before continuing.",
             color = Color(0xFFB91C1C),
             fontWeight = FontWeight.Medium
         )
-    }
-}
-
-@Composable
-private fun RegistrationBottomBar(navController: NavController) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(76.dp),
-        color = Color.White,
-        shadowElevation = 8.dp,
-        shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            BottomItem("Home", Icons.Outlined.Home, true) {
-                navController.navigate("dashboard")
-            }
-
-            BottomItem("Documents", Icons.Outlined.Folder, false) {
-                navController.navigate("library")
-            }
-
-            Box(
-                modifier = Modifier
-                    .size(54.dp)
-                    .background(MedGreen, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(31.dp)
-                )
-            }
-
-            BottomItem("Reminders", Icons.Outlined.Notifications, false) {}
-
-            BottomItem("Profile", Icons.Outlined.AccountCircle, false) {}
-        }
-    }
-}
-
-@Composable
-private fun BottomItem(
-    label: String,
-    icon: ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    TextButton(
-        onClick = onClick,
-        contentPadding = PaddingValues(0.dp)
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (selected) MedGreen else SoftText,
-                modifier = Modifier.size(23.dp)
-            )
-
-            Text(
-                text = label,
-                color = if (selected) MedGreen else SoftText,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-            )
-        }
     }
 }
