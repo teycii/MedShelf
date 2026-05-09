@@ -1,6 +1,7 @@
 package com.example.medshelf.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -11,14 +12,38 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Bloodtype
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ContactEmergency
 import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Sick
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -41,6 +66,10 @@ fun EditProfileScreen(
     navController: NavController,
     userViewModel: UserViewModel
 ) {
+    LaunchedEffect(Unit) {
+        userViewModel.loadUser()
+    }
+
     val user = userViewModel.user.value
 
     var firstName by remember(user) { mutableStateOf(user?.firstName ?: "") }
@@ -52,8 +81,14 @@ fun EditProfileScreen(
     var medications by remember(user) { mutableStateOf(user?.medications ?: "") }
     var emergencyContactName by remember(user) { mutableStateOf(user?.emergencyContactName ?: "") }
     var emergencyContactNumber by remember(user) { mutableStateOf(user?.emergencyContactNumber ?: "") }
+    var showErrors by remember { mutableStateOf(false) }
 
-    var errorMessage by remember { mutableStateOf("") }
+    val firstNameError = showErrors && !isValidProfileName(firstName)
+    val lastNameError = showErrors && !isValidProfileName(lastName)
+    val ageError = showErrors && !isValidProfileAge(age)
+    val bloodTypeError = showErrors && bloodType.isBlank()
+    val emergencyNameError = showErrors && !isValidProfileName(emergencyContactName)
+    val emergencyNumberError = showErrors && !isValidProfilePhone(emergencyContactNumber)
 
     Scaffold(
         topBar = {
@@ -97,19 +132,16 @@ fun EditProfileScreen(
                 title = "Basic Information",
                 icon = Icons.Filled.Person
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     ProfileInputField(
                         label = "First Name",
                         value = firstName,
-                        icon = Icons.Filled.Person,
+                        icon = Icons.Outlined.Person,
                         placeholder = "First name",
                         modifier = Modifier.weight(1f),
-                        onValueChange = {
-                            firstName = it
-                            errorMessage = ""
-                        }
+                        isError = firstNameError,
+                        errorText = "Use letters only.",
+                        onValueChange = { firstName = it }
                     )
 
                     ProfileInputField(
@@ -118,33 +150,29 @@ fun EditProfileScreen(
                         icon = Icons.Filled.Badge,
                         placeholder = "Last name",
                         modifier = Modifier.weight(1f),
-                        onValueChange = {
-                            lastName = it
-                            errorMessage = ""
-                        }
+                        isError = lastNameError,
+                        errorText = "Use letters only.",
+                        onValueChange = { lastName = it }
                     )
                 }
 
                 ProfileInputField(
                     label = "Age",
                     value = age,
-                    icon = Icons.Filled.Badge,
+                    icon = Icons.Filled.CalendarMonth,
                     placeholder = "e.g., 21",
                     keyboardType = KeyboardType.Number,
+                    isError = ageError,
+                    errorText = "Enter a valid age from 1 to 120.",
                     onValueChange = {
-                        age = it.filter { char -> char.isDigit() }
-                        errorMessage = ""
+                        age = it.filter { char -> char.isDigit() }.take(3)
                     }
                 )
 
-                ProfileInputField(
-                    label = "Blood Type",
+                ProfileBloodTypeDropdown(
                     value = bloodType,
-                    icon = Icons.Filled.Bloodtype,
-                    placeholder = "e.g., O+, A-, AB+",
-                    onValueChange = {
-                        bloodType = it.uppercase()
-                    }
+                    isError = bloodTypeError,
+                    onChange = { bloodType = it }
                 )
             }
 
@@ -155,25 +183,21 @@ fun EditProfileScreen(
                 ProfileInputField(
                     label = "Allergies",
                     value = allergies,
-                    icon = Icons.Filled.Warning,
+                    icon = Icons.Filled.Sick,
                     placeholder = "e.g., Penicillin, seafood, none",
                     singleLine = false,
                     minLines = 3,
-                    onValueChange = {
-                        allergies = it
-                    }
+                    onValueChange = { allergies = it }
                 )
 
                 ProfileInputField(
                     label = "Medical Conditions",
                     value = conditions,
-                    icon = Icons.Filled.HealthAndSafety,
+                    icon = Icons.Filled.LocalHospital,
                     placeholder = "e.g., Asthma, hypertension, none",
                     singleLine = false,
                     minLines = 3,
-                    onValueChange = {
-                        conditions = it
-                    }
+                    onValueChange = { conditions = it }
                 )
 
                 ProfileInputField(
@@ -183,9 +207,7 @@ fun EditProfileScreen(
                     placeholder = "e.g., Maintenance medicines, none",
                     singleLine = false,
                     minLines = 3,
-                    onValueChange = {
-                        medications = it
-                    }
+                    onValueChange = { medications = it }
                 )
             }
 
@@ -198,62 +220,64 @@ fun EditProfileScreen(
                     value = emergencyContactName,
                     icon = Icons.Filled.ContactEmergency,
                     placeholder = "e.g., Parent / Guardian",
-                    onValueChange = {
-                        emergencyContactName = it
-                    }
+                    isError = emergencyNameError,
+                    errorText = "Use letters only.",
+                    onValueChange = { emergencyContactName = it }
                 )
 
                 ProfileInputField(
                     label = "Contact Number",
                     value = emergencyContactNumber,
                     icon = Icons.Filled.Call,
-                    placeholder = "e.g., 09XXXXXXXXX",
+                    placeholder = "09 followed by 9 digits",
                     keyboardType = KeyboardType.Phone,
+                    isError = emergencyNumberError,
+                    errorText = "Use PH mobile format: 09 followed by 9 digits.",
                     onValueChange = {
                         emergencyContactNumber = it
+                            .filter { char -> char.isDigit() }
+                            .take(11)
                     }
                 )
             }
 
-            if (errorMessage.isNotBlank()) {
-                Text(
-                    text = errorMessage,
-                    color = ErrorRed,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium
-                )
+            if (
+                firstNameError ||
+                lastNameError ||
+                ageError ||
+                bloodTypeError ||
+                emergencyNameError ||
+                emergencyNumberError
+            ) {
+                ProfileErrorBox()
             }
 
             Button(
                 onClick = {
-                    when {
-                        firstName.isBlank() -> {
-                            errorMessage = "Please enter your first name."
-                        }
+                    showErrors = true
 
-                        lastName.isBlank() -> {
-                            errorMessage = "Please enter your last name."
-                        }
+                    val isFormValid =
+                        isValidProfileName(firstName) &&
+                                isValidProfileName(lastName) &&
+                                isValidProfileAge(age) &&
+                                bloodType.isNotBlank() &&
+                                isValidProfileName(emergencyContactName) &&
+                                isValidProfilePhone(emergencyContactNumber)
 
-                        age.isBlank() || age.toIntOrNull() == null -> {
-                            errorMessage = "Please enter a valid age."
-                        }
+                    if (isFormValid) {
+                        userViewModel.saveUser(
+                            firstName = firstName.trim(),
+                            lastName = lastName.trim(),
+                            age = age.toInt(),
+                            bloodType = bloodType.trim(),
+                            allergies = allergies.ifBlank { "None" },
+                            conditions = conditions.ifBlank { "None" },
+                            medications = medications.ifBlank { "None" },
+                            emergencyContactName = emergencyContactName.trim(),
+                            emergencyContactNumber = emergencyContactNumber.trim()
+                        )
 
-                        else -> {
-                            userViewModel.saveUser(
-                                firstName = firstName.trim(),
-                                lastName = lastName.trim(),
-                                age = age.toIntOrNull() ?: 0,
-                                bloodType = bloodType.trim(),
-                                allergies = allergies.ifBlank { "None" },
-                                conditions = conditions.ifBlank { "None" },
-                                medications = medications.ifBlank { "None" },
-                                emergencyContactName = emergencyContactName.ifBlank { "Not specified" },
-                                emergencyContactNumber = emergencyContactNumber.ifBlank { "Not specified" }
-                            )
-
-                            navController.popBackStack()
-                        }
+                        navController.popBackStack()
                     }
                 },
                 modifier = Modifier
@@ -283,6 +307,18 @@ fun EditProfileScreen(
     }
 }
 
+private fun isValidProfileName(value: String): Boolean {
+    return value.trim().matches(Regex("^[A-Za-z ]+$"))
+}
+
+private fun isValidProfileAge(value: String): Boolean {
+    return value.toIntOrNull()?.let { it in 1..120 } ?: false
+}
+
+private fun isValidProfilePhone(value: String): Boolean {
+    return value.trim().matches(Regex("^09\\d{9}$"))
+}
+
 @Composable
 private fun ProfileHeaderCard(
     name: String,
@@ -304,9 +340,7 @@ private fun ProfileHeaderCard(
                 shape = CircleShape,
                 color = Color(0xFFE6F7F4)
             ) {
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Filled.Person,
                         contentDescription = null,
@@ -353,9 +387,7 @@ private fun ProfileSectionCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
@@ -378,6 +410,95 @@ private fun ProfileSectionCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileBloodTypeDropdown(
+    value: String,
+    isError: Boolean,
+    onChange: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val bloodTypes = listOf(
+        "A+",
+        "A-",
+        "B+",
+        "B-",
+        "AB+",
+        "AB-",
+        "O+",
+        "O-"
+    )
+
+    Column {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = {},
+                readOnly = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(
+                        type = MenuAnchorType.PrimaryNotEditable,
+                        enabled = true
+                    ),
+                label = { Text("Blood Type") },
+                placeholder = { Text("Select blood type") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Bloodtype,
+                        contentDescription = null,
+                        tint = SoftText
+                    )
+                },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                singleLine = true,
+                isError = isError,
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = if (isError) ErrorRed else MedGreen,
+                    unfocusedBorderColor = if (isError) ErrorRed else SoftBorder,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    errorBorderColor = ErrorRed,
+                    cursorColor = MedGreen
+                )
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                bloodTypes.forEach { item ->
+                    DropdownMenuItem(
+                        text = { Text(item) },
+                        onClick = {
+                            onChange(item)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        if (isError) {
+            Spacer(modifier = Modifier.height(5.dp))
+
+            Text(
+                text = "Please select a blood type.",
+                color = ErrorRed,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+    }
+}
+
 @Composable
 private fun ProfileInputField(
     label: String,
@@ -388,33 +509,83 @@ private fun ProfileInputField(
     singleLine: Boolean = true,
     minLines: Int = 1,
     keyboardType: KeyboardType = KeyboardType.Text,
+    isError: Boolean = false,
+    errorText: String = "",
     onValueChange: (String) -> Unit
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth(),
-        label = { Text(label) },
-        placeholder = { Text(placeholder) },
-        leadingIcon = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = SoftText
+    Column(modifier = modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(label) },
+            placeholder = { Text(placeholder) },
+            leadingIcon = {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = SoftText
+                )
+            },
+            singleLine = singleLine,
+            minLines = minLines,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = keyboardType
+            ),
+            isError = isError,
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = if (isError) ErrorRed else MedGreen,
+                unfocusedBorderColor = if (isError) ErrorRed else SoftBorder,
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                errorBorderColor = ErrorRed,
+                cursorColor = MedGreen
             )
-        },
-        singleLine = singleLine,
-        minLines = minLines,
-        keyboardOptions = KeyboardOptions(
-            keyboardType = keyboardType
-        ),
-        shape = RoundedCornerShape(16.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MedGreen,
-            unfocusedBorderColor = SoftBorder,
-            focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White,
-            cursorColor = MedGreen
         )
-    )
+
+        if (isError) {
+            Spacer(modifier = Modifier.height(5.dp))
+
+            Text(
+                text = errorText,
+                color = ErrorRed,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfileErrorBox() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = Color(0xFFFFEEEE),
+                shape = RoundedCornerShape(14.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = Color(0xFFFFCACA),
+                shape = RoundedCornerShape(14.dp)
+            )
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Warning,
+            contentDescription = null,
+            tint = ErrorRed
+        )
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Text(
+            text = "Please correct the highlighted fields before saving.",
+            color = Color(0xFFB91C1C),
+            fontWeight = FontWeight.Medium
+        )
+    }
 }
