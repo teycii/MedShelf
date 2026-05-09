@@ -1,8 +1,13 @@
 package com.example.medshelf.ui.screens
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import android.webkit.MimeTypeMap
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -33,11 +38,17 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.medshelf.viewmodel.DocumentViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.core.net.toUri
 
 private val MedGreen = Color(0xFF009688)
 private val DarkText = Color(0xFF111827)
 private val SoftText = Color(0xFF64748B)
 private val SoftBorder = Color(0xFFE2E8F0)
+private val BlueAction = Color(0xFF0EA5E9)
 
 @Composable
 fun DocumentDetailsScreen(
@@ -116,7 +127,7 @@ fun DocumentDetailsScreen(
                         .fillMaxWidth()
                         .height(54.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0EA5E9))
+                    colors = ButtonDefaults.buttonColors(containerColor = BlueAction)
                 ) {
                     Icon(Icons.Filled.Edit, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -125,13 +136,9 @@ fun DocumentDetailsScreen(
 
                 Button(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(Uri.parse(document.fileUri), "*/*")
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-
-                        context.startActivity(
-                            Intent.createChooser(intent, "Open document")
+                        openDocumentFile(
+                            context = context,
+                            fileUri = document.fileUri
                         )
                     },
                     modifier = Modifier
@@ -143,6 +150,39 @@ fun DocumentDetailsScreen(
                     Icon(Icons.Filled.Visibility, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Open File", fontWeight = FontWeight.Bold)
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        val success = downloadDocumentToDownloads(
+                            context = context,
+                            fileUri = document.fileUri,
+                            documentTitle = document.name,
+                            documentType = document.type
+                        )
+
+                        Toast.makeText(
+                            context,
+                            if (success) {
+                                "Saved to Downloads/MedShelf"
+                            } else {
+                                "Download failed. Please try opening the file instead."
+                            },
+                            Toast.LENGTH_LONG
+                        ).show()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Filled.Download, contentDescription = null, tint = MedGreen)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Download File",
+                        color = MedGreen,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -177,7 +217,7 @@ private fun DocumentPreviewCard(
         ) {
             if (imageFile) {
                 AsyncImage(
-                    model = Uri.parse(fileUri),
+                    model = fileUri.toUri(),
                     contentDescription = title,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
@@ -268,9 +308,9 @@ private fun FullScreenImageViewer(
     title: String,
     onDismiss: () -> Unit
 ) {
-    var scale by remember { mutableStateOf(1f) }
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var offsetY by remember { mutableFloatStateOf(0f) }
 
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
         val newScale = (scale * zoomChange).coerceIn(1f, 5f)
@@ -295,7 +335,7 @@ private fun FullScreenImageViewer(
             contentAlignment = Alignment.Center
         ) {
             AsyncImage(
-                model = Uri.parse(fileUri),
+                model = fileUri.toUri(),
                 contentDescription = title,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
@@ -417,6 +457,133 @@ private fun DetailRow(
     }
 }
 
+private fun openDocumentFile(
+    context: Context,
+    fileUri: String
+) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(fileUri.toUri(), "*/*")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        context.startActivity(
+            Intent.createChooser(intent, "Open document")
+        )
+    } catch (_: Exception) {
+        Toast.makeText(
+            context,
+            "No app found to open this file.",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+}
+
+private fun downloadDocumentToDownloads(
+    context: Context,
+    fileUri: String,
+    documentTitle: String,
+    documentType: String
+): Boolean {
+    return try {
+        val sourceUri = fileUri.toUri()
+        val mimeType = getMimeType(context, sourceUri)
+        val extension = getFileExtensionFromMimeType(mimeType)
+        val fileName = buildDownloadFileName(
+            title = documentTitle,
+            type = documentType,
+            extension = extension
+        )
+
+        val resolver = context.contentResolver
+
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/MedShelf")
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+        }
+
+        val collectionUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        } else {
+            MediaStore.Files.getContentUri("external")
+        }
+
+        val destinationUri = resolver.insert(collectionUri, contentValues) ?: return false
+
+        resolver.openInputStream(sourceUri).use { inputStream ->
+            resolver.openOutputStream(destinationUri).use { outputStream ->
+                if (inputStream == null || outputStream == null) {
+                    return false
+                }
+
+                inputStream.copyTo(outputStream)
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val finishedValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.IS_PENDING, 0)
+            }
+
+            resolver.update(
+                destinationUri,
+                finishedValues,
+                null,
+                null
+            )
+        }
+
+        true
+    } catch (_: Exception) {
+        false
+    }
+}
+
+private fun buildDownloadFileName(
+    title: String,
+    type: String,
+    extension: String
+): String {
+    val cleanTitle = sanitizeFileName(title.ifBlank { "MedShelf Document" })
+    val cleanType = sanitizeFileName(type.ifBlank { "Medical Record" })
+    val dateStamp = SimpleDateFormat("yyyyMMdd_HH_mm_ss", Locale.getDefault()).format(Date())
+
+    return "${cleanTitle}_${cleanType}_$dateStamp.$extension"
+}
+
+private fun sanitizeFileName(value: String): String {
+    return value
+        .trim()
+        .replace(Regex("[^A-Za-z0-9 _-]"), "")
+        .replace(Regex("\\s+"), "_")
+        .take(80)
+        .ifBlank { "MedShelf_File" }
+}
+
+private fun getMimeType(
+    context: Context,
+    uri: Uri
+): String {
+    return context.contentResolver.getType(uri) ?: "application/octet-stream"
+}
+
+private fun getFileExtensionFromMimeType(mimeType: String): String {
+    return when (mimeType) {
+        "application/pdf" -> "pdf"
+        "image/jpeg" -> "jpg"
+        "image/png" -> "png"
+        "image/webp" -> "webp"
+        else -> MimeTypeMap.getSingleton()
+            .getExtensionFromMimeType(mimeType)
+            ?: "file"
+    }
+}
+
 private val PaperFoldShape: Shape = GenericShape { size, _ ->
     val fold = size.width * 0.28f
 
@@ -433,7 +600,7 @@ private fun isImageFile(
     fileUri: String
 ): Boolean {
     return try {
-        val uri = Uri.parse(fileUri)
+        val uri = fileUri.toUri()
         val mimeType = context.contentResolver.getType(uri)
         mimeType?.startsWith("image/") == true
     } catch (_: Exception) {
