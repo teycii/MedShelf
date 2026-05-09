@@ -24,6 +24,7 @@ object ReminderAlarmScheduler {
         }
 
         val intent = Intent(context, ReminderNotificationReceiver::class.java).apply {
+            putExtra("reminderId", reminder.id)
             putExtra("title", reminder.title)
             putExtra("message", buildReminderMessage(reminder))
         }
@@ -61,13 +62,17 @@ object ReminderAlarmScheduler {
     }
 
     private fun buildReminderMessage(reminder: ReminderEntity): String {
-        val scheduleText = if (reminder.scheduleType == "INTERVAL") {
+        val scheduleText = if (reminder.scheduleType == ReminderUtils.SCHEDULE_INTERVAL) {
             "Every ${reminder.intervalHours} hour(s)"
         } else {
             "${reminder.date}, ${reminder.time}"
         }
 
         return "$scheduleText • ${reminder.profile}" +
-                if (reminder.note.isNotBlank()) " • ${reminder.note}" else ""
+                if (reminder.note.isNotBlank()) {
+                    " • ${reminder.note}"
+                } else {
+                    ""
+                }
     }
 }

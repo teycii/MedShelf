@@ -27,7 +27,7 @@ import com.example.medshelf.R
 private const val CHANNEL_ID = "medshelf_medical_alarm_channel"
 private const val ACTION_STOP = "STOP_MEDSHELF_ALARM"
 private const val FIVE_MINUTES = 5 * 60 * 1000L
-private const val NOTIFICATION_ID = 999
+private const val DEFAULT_REMINDER_ID = 999
 
 class ReminderAlarmService : Service() {
 
@@ -40,8 +40,12 @@ class ReminderAlarmService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val reminderId = intent?.getIntExtra("reminderId", DEFAULT_REMINDER_ID)
+            ?: DEFAULT_REMINDER_ID
+
         if (intent?.action == ACTION_STOP) {
             stopAlarm()
+            stopSelf(startId)
             return START_NOT_STICKY
         }
 
@@ -54,6 +58,7 @@ class ReminderAlarmService : Service() {
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setOngoing(true)
@@ -61,18 +66,18 @@ class ReminderAlarmService : Service() {
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 "Stop Alert",
-                createStopPendingIntent()
+                createStopPendingIntent(reminderId)
             )
             .build()
 
         if (SDK_INT >= 34) {
             startForeground(
-                NOTIFICATION_ID,
+                reminderId,
                 notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
             )
         } else {
-            startForeground(NOTIFICATION_ID, notification)
+            startForeground(reminderId, notification)
         }
 
         startVibration()
@@ -84,21 +89,22 @@ class ReminderAlarmService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun createStopPendingIntent(): PendingIntent {
+    private fun createStopPendingIntent(reminderId: Int): PendingIntent {
         val stopIntent = Intent(this, ReminderAlarmService::class.java).apply {
             action = ACTION_STOP
+            putExtra("reminderId", reminderId)
         }
 
         return PendingIntent.getService(
             this,
-            1001,
+            reminderId + 10_000,
             stopIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
 
     private fun startVibration() {
-        vibrator?.cancel() // Stop any previous vibration
+        vibrator?.cancel()
 
         vibrator = if (SDK_INT >= S) {
             val vibratorManager =
@@ -109,14 +115,24 @@ class ReminderAlarmService : Service() {
             getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
 
-        val pattern = longArrayOf(0, 1000, 500, 1000, 500, 1500, 700)
+        val pattern = longArrayOf(
+            0,
+            1000,
+            500,
+            1000,
+            500,
+            1500,
+            700
+        )
 
         if (SDK_INT >= O) {
             val effect = VibrationEffect.createWaveform(pattern, 0)
+
             if (SDK_INT >= 33) {
                 val attributes = VibrationAttributes.Builder()
                     .setUsage(VibrationAttributes.USAGE_ALARM)
                     .build()
+
                 vibrator?.vibrate(effect, attributes)
             } else {
                 vibrator?.vibrate(effect)
@@ -128,25 +144,22 @@ class ReminderAlarmService : Service() {
     }
 
     private fun startSound() {
-        ringtone?.stop() // Stop any previous sound
+        ringtone?.stop()
 
         val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val ringerMode = audioManager.ringerMode
 
-        // Only play sound if NOT in Silent or Vibrate mode
-        if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
+        if (audioManager.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
             val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
             ringtone = RingtoneManager.getRingtone(this, alarmUri)
 
-            // Set to USAGE_NOTIFICATION so it respects notification volume and silent mode
             val attributes = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build()
-            ringtone?.audioAttributes = attributes
 
+            ringtone?.audioAttributes = attributes
             ringtone?.play()
         }
     }
@@ -156,7 +169,6 @@ class ReminderAlarmService : Service() {
         vibrator?.cancel()
         ringtone?.stop()
         stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
     }
 
     private fun createChannel() {
@@ -168,7 +180,13 @@ class ReminderAlarmService : Service() {
             ).apply {
                 description = "Long medical reminder alerts"
                 enableVibration(true)
-                vibrationPattern = longArrayOf(0, 1000, 500, 1000, 500)
+                vibrationPattern = longArrayOf(
+                    0,
+                    1000,
+                    500,
+                    1000,
+                    500
+                )
                 setSound(null, null)
             }
 

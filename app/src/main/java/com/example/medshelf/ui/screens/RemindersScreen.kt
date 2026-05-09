@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.medshelf.model.ReminderEntity
+import com.example.medshelf.reminder.ReminderUtils
 import com.example.medshelf.viewmodel.ReminderViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -392,6 +393,13 @@ private fun ReminderCard(
 ) {
     val menuExpanded = remember { mutableStateOf(false) }
     val isOverdue = reminder.nextTriggerAtMillis < currentTime && reminder.status != STATUS_COMPLETED
+    val isCompletedForNow = ReminderUtils.isCompletedForCurrentCycle(reminder)
+    val displayStatus = when {
+        reminder.status == STATUS_COMPLETED -> STATUS_COMPLETED
+        isCompletedForNow -> "Done for now"
+        isOverdue -> "Overdue"
+        else -> reminder.status
+    }
     val timeStatus = formatTimeStatus(reminder.nextTriggerAtMillis, currentTime)
 
     Card(
@@ -399,13 +407,13 @@ private fun ReminderCard(
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, if (isOverdue) ErrorRed.copy(alpha = 0.5f) else SoftBorder)
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (isOverdue && !isCompletedForNow) ErrorRed.copy(alpha = 0.5f) else SoftBorder)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ReminderIcon(status = if (isOverdue) "Overdue" else reminder.status)
+            ReminderIcon(status = displayStatus)
 
             Spacer(modifier = Modifier.width(14.dp))
 
@@ -414,12 +422,12 @@ private fun ReminderCard(
                     text = reminder.title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (isOverdue) ErrorRed else DarkText,
+                    color = if (isOverdue && !isCompletedForNow) ErrorRed else DarkText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                if (timeStatus.isNotBlank()) {
+                if (timeStatus.isNotBlank() && !isCompletedForNow) {
                     Text(
                         text = timeStatus,
                         style = MaterialTheme.typography.labelSmall,
@@ -452,7 +460,7 @@ private fun ReminderCard(
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                StatusChip(status = reminder.status)
+                StatusChip(status = displayStatus)
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -508,6 +516,8 @@ private fun ReminderCard(
                                 Text(
                                     if (reminder.status == STATUS_COMPLETED) {
                                         "Mark as Active"
+                                    } else if (isCompletedForNow) {
+                                        "Mark as Not Done"
                                     } else {
                                         "Mark as Completed"
                                     }
@@ -515,13 +525,13 @@ private fun ReminderCard(
                             },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = if (reminder.status == STATUS_COMPLETED) {
+                                    imageVector = if (reminder.status == STATUS_COMPLETED || isCompletedForNow) {
                                         Icons.Filled.Notifications
                                     } else {
                                         Icons.Filled.CheckCircle
                                     },
                                     contentDescription = null,
-                                    tint = if (reminder.status == STATUS_COMPLETED) {
+                                    tint = if (reminder.status == STATUS_COMPLETED || isCompletedForNow) {
                                         MedGreen
                                     } else {
                                         SuccessGreen
@@ -531,7 +541,7 @@ private fun ReminderCard(
                             onClick = {
                                 menuExpanded.value = false
 
-                                if (reminder.status == STATUS_COMPLETED) {
+                                if (reminder.status == STATUS_COMPLETED || isCompletedForNow) {
                                     onRestore()
                                 } else {
                                     onComplete()
@@ -610,11 +620,11 @@ private fun ReminderIcon(status: String) {
     val color = when (status) {
         "Due soon" -> Purple
         "Upcoming" -> Orange
-        STATUS_COMPLETED -> MedGreen
+        STATUS_COMPLETED, "Done for now" -> MedGreen
         else -> MedGreen
     }
 
-    val icon = if (status == STATUS_COMPLETED) {
+    val icon = if (status == STATUS_COMPLETED || status == "Done for now") {
         Icons.Filled.CheckCircle
     } else {
         Icons.Filled.Medication
@@ -665,7 +675,8 @@ private fun StatusChip(status: String) {
     val color = when (status) {
         "Due soon" -> Purple
         "Upcoming" -> Orange
-        STATUS_COMPLETED -> MedGreen
+        STATUS_COMPLETED, "Done for now" -> MedGreen
+        "Overdue" -> ErrorRed
         else -> MedGreen
     }
 
@@ -1040,11 +1051,12 @@ private fun AddEditReminderDialog(
             Button(
                 onClick = {
                     val interval = intervalHours.value.toIntOrNull() ?: 0
-                    val nextTrigger = calculateNextTriggerMillis(
+                    val nextTrigger = ReminderUtils.calculateNextTriggerMillis(
                         selectedDate.value,
                         selectedTime.value,
                         scheduleType.value,
-                        interval
+                        interval,
+                        repeat.value
                     )
 
                     when {
@@ -1181,42 +1193,6 @@ private fun AddEditReminderDialog(
                 }
             }
         )
-    }
-}
-
-private fun calculateNextTriggerMillis(
-    date: String,
-    time: String,
-    scheduleType: String,
-    intervalHours: Int
-): Long {
-    val dateTimeMillis = parseDateTimeMillis(date, time)
-    val now = System.currentTimeMillis()
-
-    return if (scheduleType == SCHEDULE_INTERVAL) {
-        if (dateTimeMillis > now) {
-            dateTimeMillis
-        } else {
-            // If start time is in the past, find the next interval slot
-            val diff = now - dateTimeMillis
-            val intervalsPassed = (diff / (intervalHours * 3600000L)) + 1
-            dateTimeMillis + (intervalsPassed * intervalHours * 3600000L)
-        }
-    } else {
-        // For specific date/time, if it's in the past, we should ideally not allow it or return -1
-        if (dateTimeMillis < now) -1L else dateTimeMillis
-    }
-}
-
-private fun parseDateTimeMillis(
-    date: String,
-    time: String
-): Long {
-    return try {
-        val formatter = SimpleDateFormat("MMM dd, yyyy h:mm a", Locale.getDefault())
-        formatter.parse("$date $time")?.time ?: 0L
-    } catch (_: Exception) {
-        0L
     }
 }
 

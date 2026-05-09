@@ -2,7 +2,18 @@ package com.example.medshelf.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,6 +51,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -124,8 +136,7 @@ fun EditProfileScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             ProfileHeaderCard(
-                name = "${firstName.ifBlank { "Your" }} ${lastName.ifBlank { "Profile" }}",
-                subtitle = "Keep your emergency medical details updated."
+                name = "${firstName.ifBlank { "Your" }} ${lastName.ifBlank { "Profile" }}"
             )
 
             ProfileSectionCard(
@@ -320,10 +331,7 @@ private fun isValidProfilePhone(value: String): Boolean {
 }
 
 @Composable
-private fun ProfileHeaderCard(
-    name: String,
-    subtitle: String
-) {
+private fun ProfileHeaderCard(name: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -361,7 +369,7 @@ private fun ProfileHeaderCard(
                 )
 
                 Text(
-                    text = subtitle,
+                    text = "Keep your emergency medical details updated.",
                     style = MaterialTheme.typography.bodySmall,
                     color = SoftText
                 )
@@ -417,7 +425,9 @@ private fun ProfileBloodTypeDropdown(
     isError: Boolean,
     onChange: (String) -> Unit
 ) {
-    var expanded by remember(value) { mutableStateOf(false) }
+    val expandedState: MutableState<Boolean> = remember {
+        mutableStateOf(false)
+    }
 
     val bloodTypes = listOf(
         "A+",
@@ -432,8 +442,10 @@ private fun ProfileBloodTypeDropdown(
 
     Column {
         ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
+            expanded = expandedState.value,
+            onExpandedChange = {
+                expandedState.value = it
+            }
         ) {
             OutlinedTextField(
                 value = value,
@@ -455,7 +467,9 @@ private fun ProfileBloodTypeDropdown(
                     )
                 },
                 trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                    ExposedDropdownMenuDefaults.TrailingIcon(
+                        expanded = expandedState.value
+                    )
                 },
                 singleLine = true,
                 isError = isError,
@@ -471,15 +485,17 @@ private fun ProfileBloodTypeDropdown(
             )
 
             ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
+                expanded = expandedState.value,
+                onDismissRequest = {
+                    expandedState.value = false
+                }
             ) {
                 bloodTypes.forEach { item ->
                     DropdownMenuItem(
                         text = { Text(item) },
                         onClick = {
                             onChange(item)
-                            expanded = false
+                            expandedState.value = false
                         }
                     )
                 }

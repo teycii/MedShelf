@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -31,7 +32,10 @@ import com.example.medshelf.model.ReminderEntity
 import com.example.medshelf.viewmodel.DocumentViewModel
 import com.example.medshelf.viewmodel.ReminderViewModel
 import com.example.medshelf.viewmodel.UserViewModel
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 private val MedGreen = Color(0xFF009688)
 private val DarkText = Color(0xFF111827)
@@ -39,6 +43,7 @@ private val SoftText = Color(0xFF64748B)
 private val SoftBorder = Color(0xFFE2E8F0)
 private val Purple = Color(0xFF7C3AED)
 private val Orange = Color(0xFFF59E0B)
+private val ErrorRed = Color(0xFFEF4444)
 
 private const val STATUS_COMPLETED = "Completed"
 
@@ -57,8 +62,14 @@ fun DashboardScreen(
     val bloodType = user?.bloodType ?: "Not set"
 
     val recentDocuments = documents.take(3)
-    val activeReminders = reminders.filter { it.status != STATUS_COMPLETED }
-    val upcomingReminder = activeReminders.minByOrNull { it.nextTriggerAtMillis }
+
+    val upcomingReminders = reminders
+        .filter { reminder ->
+            reminder.status != STATUS_COMPLETED &&
+                    reminder.nextTriggerAtMillis > System.currentTimeMillis()
+        }
+        .sortedBy { it.nextTriggerAtMillis }
+        .take(3)
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -99,7 +110,7 @@ fun DashboardScreen(
                 item {
                     DashboardStatsRow(
                         documentCount = documents.size,
-                        reminderCount = activeReminders.size
+                        reminderCount = upcomingReminders.size
                     )
                 }
 
@@ -148,7 +159,7 @@ fun DashboardScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         QuickActionCard(
                             title = "Reminders",
-                            subtitle = "${activeReminders.size} active",
+                            subtitle = "${upcomingReminders.size} upcoming",
                             icon = Icons.Outlined.Notifications,
                             bgColor = Color(0xFFF0EAFE),
                             iconColor = Purple,
@@ -178,8 +189,8 @@ fun DashboardScreen(
                 }
 
                 item {
-                    UpcomingReminderHighlight(
-                        reminder = upcomingReminder,
+                    UpcomingRemindersCard(
+                        reminders = upcomingReminders,
                         onClick = {
                             navController.navigate("reminders")
                         }
@@ -283,7 +294,7 @@ private fun GreetingSection(firstName: String) {
     Spacer(modifier = Modifier.height(4.dp))
 
     Text(
-        text = "Here’s your health overview from your saved records.",
+        text = "Here’s your latest health overview from saved records.",
         style = MaterialTheme.typography.bodyMedium,
         color = SoftText
     )
@@ -304,7 +315,7 @@ private fun DashboardStatsRow(
         )
 
         StatCard(
-            title = "Active Reminders",
+            title = "Upcoming",
             value = reminderCount.toString(),
             icon = Icons.Filled.Notifications,
             color = Purple,
@@ -610,8 +621,8 @@ private fun ProfileMiniCard(
 }
 
 @Composable
-private fun UpcomingReminderHighlight(
-    reminder: ReminderEntity?,
+private fun UpcomingRemindersCard(
+    reminders: List<ReminderEntity>,
     onClick: () -> Unit
 ) {
     Card(
@@ -623,68 +634,154 @@ private fun UpcomingReminderHighlight(
         elevation = CardDefaults.cardElevation(2.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD6F5EF))
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(14.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Upcoming Reminder",
+                    text = "Upcoming Reminders",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MedGreen
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.weight(1f))
 
+                Text(
+                    text = "Latest",
+                    color = Purple,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Purple,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (reminders.isEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .background(Color(0xFFF0EAFE), RoundedCornerShape(14.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Medication,
-                            contentDescription = null,
-                            tint = Purple
-                        )
-                    }
+                    ReminderIconBox()
 
                     Spacer(modifier = Modifier.width(12.dp))
 
                     Column {
                         Text(
-                            text = reminder?.title ?: "No active reminder",
+                            text = "No upcoming reminders",
                             fontWeight = FontWeight.Bold,
-                            color = DarkText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            color = DarkText
                         )
 
                         Text(
-                            text = reminder?.let {
-                                if (it.scheduleType == "INTERVAL") {
-                                    "Every ${it.intervalHours} hour(s) • Starts ${it.time}"
-                                } else {
-                                    "${it.date}, ${it.time}"
-                                }
-                            } ?: "Tap to add medication reminder",
+                            text = "Tap to add a medication reminder",
                             color = SoftText,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
-            }
+            } else {
+                reminders.forEachIndexed { index, reminder ->
+                    UpcomingReminderRow(reminder = reminder)
 
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = Purple,
-                modifier = Modifier.size(22.dp)
+                    if (index != reminders.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 10.dp),
+                            color = Color(0xFFD6F5EF)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpcomingReminderRow(reminder: ReminderEntity) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        ReminderIconBox()
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = reminder.title.ifBlank { "Untitled Reminder" },
+                fontWeight = FontWeight.Bold,
+                color = DarkText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
+
+            Text(
+                text = formatReminderSchedule(reminder),
+                color = SoftText,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Surface(
+            color = Purple.copy(alpha = 0.10f),
+            shape = RoundedCornerShape(50.dp)
+        ) {
+            Text(
+                text = formatReminderDateShort(reminder.nextTriggerAtMillis),
+                color = Purple,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReminderIconBox() {
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .background(Color(0xFFF0EAFE), RoundedCornerShape(14.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Medication,
+            contentDescription = null,
+            tint = Purple
+        )
+    }
+}
+
+private fun formatReminderSchedule(reminder: ReminderEntity): String {
+    return if (reminder.scheduleType == "INTERVAL") {
+        "Every ${reminder.intervalHours} hour(s) • ${reminder.profile}"
+    } else {
+        "${reminder.date}, ${reminder.time} • ${reminder.profile}"
+    }
+}
+
+private fun formatReminderDateShort(millis: Long): String {
+    if (millis <= 0L) return "Unset"
+
+    val now = Calendar.getInstance()
+    val reminderDate = Calendar.getInstance().apply {
+        timeInMillis = millis
+    }
+
+    return when {
+        now.get(Calendar.YEAR) == reminderDate.get(Calendar.YEAR) &&
+                now.get(Calendar.DAY_OF_YEAR) == reminderDate.get(Calendar.DAY_OF_YEAR) -> {
+            SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(millis))
+        }
+
+        else -> {
+            SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(millis))
         }
     }
 }
@@ -941,7 +1038,7 @@ private fun categoryIcon(type: String): ImageVector {
         type.contains("X-Ray", ignoreCase = true) || type.contains("Imaging", ignoreCase = true) -> Icons.Default.MonitorHeart
         type.contains("Vaccination", ignoreCase = true) -> Icons.Default.Vaccines
         type.contains("Discharge", ignoreCase = true) -> Icons.Default.LocalHospital
-        type.contains("Bill", ignoreCase = true) -> Icons.Default.ReceiptLong
+        type.contains("Bill", ignoreCase = true) -> Icons.AutoMirrored.Filled.ReceiptLong
         type.contains("Insurance", ignoreCase = true) -> Icons.Default.Shield
         type.contains("Note", ignoreCase = true) -> Icons.Default.NoteAlt
         type.contains("Clearance", ignoreCase = true) -> Icons.Default.HealthAndSafety

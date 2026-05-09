@@ -24,6 +24,6 @@ interface ReminderDao {
     @Query("SELECT * FROM reminders ORDER BY nextTriggerAtMillis ASC")
     fun getAllReminders(): Flow<List<ReminderEntity>>
 
-    @Query("SELECT * FROM reminders")
+    @Query("SELECT * FROM reminders ORDER BY nextTriggerAtMillis ASC")
     suspend fun getAllRemindersSync(): List<ReminderEntity>
 }

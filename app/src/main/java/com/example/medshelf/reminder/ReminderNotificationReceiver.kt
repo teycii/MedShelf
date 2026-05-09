@@ -14,55 +14,83 @@ import kotlinx.coroutines.launch
 class ReminderNotificationReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        // Acquire a temporary WakeLock to ensure the CPU doesn't sleep before service starts
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+
         val wakeLock = powerManager.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
-            "MedShelf:AlarmWakeLock"
+            "MedShelf:ReminderWakeLock"
         )
-        wakeLock.acquire(10 * 1000L) // 10 seconds is plenty to start the service
 
-        val action = intent.action
-        Log.d("MedShelf_Receiver", "Received action: $action")
-
-        if (action == Intent.ACTION_BOOT_COMPLETED || action == Intent.ACTION_LOCKED_BOOT_COMPLETED) {
-            rescheduleAllReminders(context)
-            return
-        }
-
-        val title = intent.getStringExtra("title") ?: "MedShelf Reminder"
-        val message = intent.getStringExtra("message") ?: "You have a medical reminder."
-
-        val serviceIntent = Intent(context, ReminderAlarmService::class.java).apply {
-            putExtra("title", title)
-            putExtra("message", message)
-        }
+        wakeLock.acquire(10_000L)
 
         try {
+            val action = intent.action
+
+            if (
+                action == Intent.ACTION_BOOT_COMPLETED ||
+                action == Intent.ACTION_LOCKED_BOOT_COMPLETED
+            ) {
+                rescheduleAllReminders(context)
+                return
+            }
+
+            val reminderId = intent.getIntExtra("reminderId", 0)
+            val title = intent.getStringExtra("title") ?: "MedShelf Reminder"
+            val message = intent.getStringExtra("message") ?: "You have a medical reminder."
+
+            val serviceIntent = Intent(context, ReminderAlarmService::class.java).apply {
+                putExtra("reminderId", reminderId)
+                putExtra("title", title)
+                putExtra("message", message)
+            }
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(serviceIntent)
             } else {
                 context.startService(serviceIntent)
             }
-        } catch (e: Exception) {
-            Log.e("MedShelf_Receiver", "Error starting service: ${e.message}")
+
+        } catch (exception: Exception) {
+            Log.e(
+                "MedShelf_Receiver",
+                "Failed to start reminder service: ${exception.message}"
+            )
+        } finally {
+            if (wakeLock.isHeld) {
+                wakeLock.release()
+            }
         }
     }
 
     private fun rescheduleAllReminders(context: Context) {
-        val scope = CoroutineScope(Dispatchers.IO)
-        scope.launch {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 val database = AppDatabase.getDatabase(context)
-                val activeReminders = database.reminderDao().getAllRemindersSync()
-                    .filter { it.status == "Scheduled" }
+
+                val activeReminders = database.reminderDao()
+                    .getAllRemindersSync()
+                    .filter { reminder ->
+                        reminder.status == ReminderUtils.STATUS_SCHEDULED &&
+                                reminder.nextTriggerAtMillis > System.currentTimeMillis()
+                    }
 
                 activeReminders.forEach { reminder ->
-                    ReminderAlarmScheduler.scheduleReminder(context, reminder)
+                    ReminderAlarmScheduler.scheduleReminder(
+                        context = context,
+                        reminder = reminder
+                    )
                 }
-                Log.d("MedShelf_Receiver", "Rescheduled ${activeReminders.size} reminders after boot.")
-            } catch (e: Exception) {
-                Log.e("MedShelf_Receiver", "Failed to reschedule reminders: ${e.message}")
+
+                Log.d(
+                    "MedShelf_Receiver",
+                    "Rescheduled ${activeReminders.size} reminders after reboot."
+                )
+
+            } catch (exception: Exception) {
+                Log.e(
+                    "MedShelf_Receiver",
+                    "Failed to reschedule reminders: ${exception.message}"
+                )
             }
         }
     }

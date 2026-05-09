@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.medshelf.data.AppDatabase
 import com.example.medshelf.model.ReminderEntity
 import com.example.medshelf.reminder.ReminderAlarmScheduler
+import com.example.medshelf.reminder.ReminderUtils
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -28,34 +29,47 @@ class ReminderViewModel(application: Application) : AndroidViewModel(application
 
     fun addReminder(reminder: ReminderEntity) {
         viewModelScope.launch {
-            val newId = reminderDao.insertReminder(reminder).toInt()
-            val savedReminder = reminder.copy(id = newId)
+            val nextTrigger = ReminderUtils.calculateNextTriggerMillis(reminder)
 
-            ReminderAlarmScheduler.scheduleReminder(
-                context = appContext,
-                reminder = savedReminder
+            val reminderToSave = reminder.copy(
+                status = ReminderUtils.STATUS_SCHEDULED,
+                nextTriggerAtMillis = nextTrigger,
+                lastCompletedAtMillis = 0L
             )
+
+            val newId = reminderDao.insertReminder(reminderToSave).toInt()
+            val savedReminder = reminderToSave.copy(id = newId)
+
+            if (savedReminder.nextTriggerAtMillis > System.currentTimeMillis()) {
+                ReminderAlarmScheduler.scheduleReminder(
+                    context = appContext,
+                    reminder = savedReminder
+                )
+            }
         }
     }
 
     fun updateReminder(reminder: ReminderEntity) {
         viewModelScope.launch {
-            reminderDao.updateReminder(reminder)
+            ReminderAlarmScheduler.cancelReminder(
+                context = appContext,
+                reminder = reminder
+            )
 
-            if (reminder.status == "Completed") {
-                ReminderAlarmScheduler.cancelReminder(
-                    context = appContext,
-                    reminder = reminder
-                )
-            } else {
-                ReminderAlarmScheduler.cancelReminder(
-                    context = appContext,
-                    reminder = reminder
-                )
+            val nextTrigger = ReminderUtils.calculateNextTriggerMillis(reminder)
 
+            val reminderToUpdate = reminder.copy(
+                status = ReminderUtils.STATUS_SCHEDULED,
+                nextTriggerAtMillis = nextTrigger,
+                lastCompletedAtMillis = 0L
+            )
+
+            reminderDao.updateReminder(reminderToUpdate)
+
+            if (reminderToUpdate.nextTriggerAtMillis > System.currentTimeMillis()) {
                 ReminderAlarmScheduler.scheduleReminder(
                     context = appContext,
-                    reminder = reminder
+                    reminder = reminderToUpdate
                 )
             }
         }
@@ -74,27 +88,69 @@ class ReminderViewModel(application: Application) : AndroidViewModel(application
 
     fun markComplete(reminder: ReminderEntity) {
         viewModelScope.launch {
-            val completedReminder = reminder.copy(status = "Completed")
-
             ReminderAlarmScheduler.cancelReminder(
                 context = appContext,
                 reminder = reminder
             )
 
-            reminderDao.updateReminder(completedReminder)
+            val now = System.currentTimeMillis()
+
+            val isRepeating =
+                reminder.scheduleType == ReminderUtils.SCHEDULE_INTERVAL ||
+                        reminder.repeat != "Once"
+
+            if (isRepeating) {
+                val nextTrigger = ReminderUtils.calculateNextTriggerMillis(reminder)
+
+                val updatedReminder = reminder.copy(
+                    status = ReminderUtils.STATUS_SCHEDULED,
+                    lastCompletedAtMillis = now,
+                    nextTriggerAtMillis = nextTrigger
+                )
+
+                reminderDao.updateReminder(updatedReminder)
+
+                if (nextTrigger > now) {
+                    ReminderAlarmScheduler.scheduleReminder(
+                        context = appContext,
+                        reminder = updatedReminder
+                    )
+                }
+            } else {
+                val completedReminder = reminder.copy(
+                    status = ReminderUtils.STATUS_COMPLETED,
+                    lastCompletedAtMillis = now,
+                    nextTriggerAtMillis = 0L
+                )
+
+                reminderDao.updateReminder(completedReminder)
+            }
         }
     }
 
     fun markActive(reminder: ReminderEntity) {
         viewModelScope.launch {
-            val activeReminder = reminder.copy(status = "Scheduled")
+            ReminderAlarmScheduler.cancelReminder(
+                context = appContext,
+                reminder = reminder
+            )
+
+            val nextTrigger = ReminderUtils.calculateNextTriggerMillis(reminder)
+
+            val activeReminder = reminder.copy(
+                status = ReminderUtils.STATUS_SCHEDULED,
+                lastCompletedAtMillis = 0L,
+                nextTriggerAtMillis = nextTrigger
+            )
 
             reminderDao.updateReminder(activeReminder)
 
-            ReminderAlarmScheduler.scheduleReminder(
-                context = appContext,
-                reminder = activeReminder
-            )
+            if (nextTrigger > System.currentTimeMillis()) {
+                ReminderAlarmScheduler.scheduleReminder(
+                    context = appContext,
+                    reminder = activeReminder
+                )
+            }
         }
     }
 }
