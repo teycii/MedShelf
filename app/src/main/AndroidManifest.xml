@@ -1,11 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.medshelf">
 
+    <!-- CAMERA -->
     <uses-permission android:name="android.permission.CAMERA" />
 
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
+
+    <!-- REMINDER NOTIFICATIONS -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:allowBackup="true"
@@ -15,6 +20,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MedShelf">
 
+        <!-- CAMERA FILE PROVIDER -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -26,6 +32,12 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- REMINDER RECEIVER -->
+        <receiver
+            android:name=".reminder.ReminderNotificationReceiver"
+            android:exported="false" />
+
+        <!-- SPLASH SCREEN -->
         <activity
             android:name=".SplashActivity"
             android:exported="true"
@@ -38,6 +50,7 @@
             </intent-filter>
         </activity>
 
+        <!-- MAIN ACTIVITY -->
         <activity
             android:name=".MainActivity"
             android:exported="false"

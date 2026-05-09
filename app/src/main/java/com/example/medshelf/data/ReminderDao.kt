@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 interface ReminderDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertReminder(reminder: ReminderEntity)
+    suspend fun insertReminder(reminder: ReminderEntity): Long
 
     @Update
     suspend fun updateReminder(reminder: ReminderEntity)
@@ -16,6 +16,6 @@ interface ReminderDao {
     @Delete
     suspend fun deleteReminder(reminder: ReminderEntity)
 
-    @Query("SELECT * FROM reminders ORDER BY createdAt DESC")
+    @Query("SELECT * FROM reminders ORDER BY nextTriggerAtMillis ASC")
     fun getAllReminders(): Flow<List<ReminderEntity>>
 }

@@ -1,5 +1,7 @@
 package com.example.medshelf.ui.screens
 
+import android.Manifest
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,7 +9,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.NoteAlt
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
@@ -21,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.medshelf.model.ReminderEntity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import com.example.medshelf.viewmodel.ReminderViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -44,6 +59,16 @@ fun RemindersScreen(
     var showDialog by remember { mutableStateOf(false) }
     var editingReminder by remember { mutableStateOf<ReminderEntity?>(null) }
     var reminderToDelete by remember { mutableStateOf<ReminderEntity?>(null) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) {}
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     val activeReminders = reminders.filter { it.status != "Completed" }
     val nextReminder = activeReminders.firstOrNull()
@@ -141,32 +166,22 @@ fun RemindersScreen(
             onDismiss = {
                 showDialog = false
             },
-            onSave = { title, date, time, profile, note, repeat ->
+            onSave = { reminderData ->
                 val editing = editingReminder
 
                 if (editing == null) {
-                    reminderViewModel.addReminder(
-                        title = title,
-                        date = date,
-                        time = time,
-                        profile = profile,
-                        note = note,
-                        repeat = repeat
-                    )
+                    reminderViewModel.addReminder(reminderData)
                 } else {
                     reminderViewModel.updateReminder(
-                        editing.copy(
-                            title = title,
-                            date = date,
-                            time = time,
-                            profile = profile,
-                            note = note,
-                            repeat = repeat
+                        reminderData.copy(
+                            id = editing.id,
+                            createdAt = editing.createdAt
                         )
                     )
                 }
 
                 showDialog = false
+                editingReminder = null
             }
         )
     }
@@ -271,8 +286,13 @@ private fun NextReminderCard(reminder: ReminderEntity?) {
                 )
 
                 Text(
-                    text = reminder?.let { "${it.date}, ${it.time} • ${it.profile}" }
-                        ?: "Add your first reminder",
+                    text = reminder?.let {
+                        if (it.scheduleType == "INTERVAL") {
+                            "Every ${it.intervalHours} hour(s) • ${it.profile}"
+                        } else {
+                            "${it.date}, ${it.time} • ${it.profile}"
+                        }
+                    } ?: "Add your first reminder",
                     style = MaterialTheme.typography.bodySmall,
                     color = SoftText,
                     maxLines = 1,
@@ -330,8 +350,14 @@ private fun ReminderCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                InfoLine(Icons.Filled.CalendarMonth, reminder.date)
-                InfoLine(Icons.Filled.AccessTime, reminder.time)
+                if (reminder.scheduleType == "INTERVAL") {
+                    InfoLine(Icons.Filled.Schedule, "Every ${reminder.intervalHours} hour(s)")
+                    InfoLine(Icons.Filled.AccessTime, "Starts: ${reminder.date}, ${reminder.time}")
+                } else {
+                    InfoLine(Icons.Filled.CalendarMonth, reminder.date)
+                    InfoLine(Icons.Filled.AccessTime, reminder.time)
+                }
+
                 InfoLine(Icons.Filled.Person, reminder.profile)
 
                 if (reminder.note.isNotBlank()) {
@@ -352,7 +378,11 @@ private fun ReminderCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = reminder.repeat,
+                    text = if (reminder.scheduleType == "INTERVAL") {
+                        "Every ${reminder.intervalHours}h"
+                    } else {
+                        reminder.repeat
+                    },
                     color = SoftText,
                     style = MaterialTheme.typography.labelSmall
                 )
@@ -530,14 +560,7 @@ private fun StatusChip(status: String) {
 private fun AddEditReminderDialog(
     existingReminder: ReminderEntity?,
     onDismiss: () -> Unit,
-    onSave: (
-        title: String,
-        date: String,
-        time: String,
-        profile: String,
-        note: String,
-        repeat: String
-    ) -> Unit
+    onSave: (ReminderEntity) -> Unit
 ) {
     var title by remember(existingReminder?.id) { mutableStateOf(existingReminder?.title ?: "") }
     var selectedDate by remember(existingReminder?.id) { mutableStateOf(existingReminder?.date ?: "") }
@@ -545,15 +568,29 @@ private fun AddEditReminderDialog(
     var profile by remember(existingReminder?.id) { mutableStateOf(existingReminder?.profile ?: "Main profile") }
     var note by remember(existingReminder?.id) { mutableStateOf(existingReminder?.note ?: "") }
     var repeat by remember(existingReminder?.id) { mutableStateOf(existingReminder?.repeat ?: "Once") }
+    var scheduleType by remember(existingReminder?.id) {
+        mutableStateOf(existingReminder?.scheduleType ?: "DATE_TIME")
+    }
+    var intervalHours by remember(existingReminder?.id) {
+        mutableStateOf(
+            if ((existingReminder?.intervalHours ?: 0) > 0) {
+                existingReminder?.intervalHours.toString()
+            } else {
+                "6"
+            }
+        )
+    }
     var error by remember { mutableStateOf("") }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var profileExpanded by remember { mutableStateOf(false) }
     var repeatExpanded by remember { mutableStateOf(false) }
+    var scheduleExpanded by remember { mutableStateOf(false) }
 
     val profiles = listOf("Main profile", "Family member")
     val repeatOptions = listOf("Once", "Daily", "Weekly", "Monthly")
+    val scheduleOptions = listOf("DATE_TIME", "INTERVAL")
 
     val datePickerState = rememberDatePickerState()
     val timePickerState = rememberTimePickerState(
@@ -585,11 +622,59 @@ private fun AddEditReminderDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                ExposedDropdownMenuBox(
+                    expanded = scheduleExpanded,
+                    onExpandedChange = { scheduleExpanded = !scheduleExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = if (scheduleType == "DATE_TIME") "Specific Date & Time" else "Every X Hours",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Schedule Type") },
+                        leadingIcon = { Icon(Icons.Filled.Schedule, contentDescription = null) },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = scheduleExpanded)
+                        },
+                        modifier = Modifier
+                            .menuAnchor(
+                                type = MenuAnchorType.PrimaryNotEditable,
+                                enabled = true
+                            )
+                            .fillMaxWidth()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = scheduleExpanded,
+                        onDismissRequest = {
+                            scheduleExpanded = false
+                        }
+                    ) {
+                        scheduleOptions.forEach { item ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (item == "DATE_TIME") {
+                                            "Specific Date & Time"
+                                        } else {
+                                            "Every X Hours"
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    scheduleType = item
+                                    scheduleExpanded = false
+                                    error = ""
+                                }
+                            )
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = selectedDate,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Date") },
+                    label = { Text(if (scheduleType == "INTERVAL") "Start Date" else "Date") },
                     placeholder = { Text("Select date") },
                     leadingIcon = { Icon(Icons.Filled.Event, contentDescription = null) },
                     trailingIcon = {
@@ -604,7 +689,7 @@ private fun AddEditReminderDialog(
                     value = selectedTime,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Time") },
+                    label = { Text(if (scheduleType == "INTERVAL") "Start Time" else "Time") },
                     placeholder = { Text("Select time") },
                     leadingIcon = { Icon(Icons.Filled.Schedule, contentDescription = null) },
                     trailingIcon = {
@@ -614,6 +699,60 @@ private fun AddEditReminderDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                if (scheduleType == "INTERVAL") {
+                    OutlinedTextField(
+                        value = intervalHours,
+                        onValueChange = {
+                            intervalHours = it.filter { char -> char.isDigit() }
+                            error = ""
+                        },
+                        label = { Text("Interval Hours") },
+                        placeholder = { Text("e.g., 6, 8, 12") },
+                        leadingIcon = { Icon(Icons.Filled.AccessTime, contentDescription = null) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    ExposedDropdownMenuBox(
+                        expanded = repeatExpanded,
+                        onExpandedChange = { repeatExpanded = !repeatExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = repeat,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Repeat") },
+                            leadingIcon = { Icon(Icons.Filled.Notifications, contentDescription = null) },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = repeatExpanded)
+                            },
+                            modifier = Modifier
+                                .menuAnchor(
+                                    type = MenuAnchorType.PrimaryNotEditable,
+                                    enabled = true
+                                )
+                                .fillMaxWidth()
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = repeatExpanded,
+                            onDismissRequest = {
+                                repeatExpanded = false
+                            }
+                        ) {
+                            repeatOptions.forEach { item ->
+                                DropdownMenuItem(
+                                    text = { Text(item) },
+                                    onClick = {
+                                        repeat = item
+                                        repeatExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
 
                 ExposedDropdownMenuBox(
                     expanded = profileExpanded,
@@ -654,45 +793,6 @@ private fun AddEditReminderDialog(
                     }
                 }
 
-                ExposedDropdownMenuBox(
-                    expanded = repeatExpanded,
-                    onExpandedChange = { repeatExpanded = !repeatExpanded }
-                ) {
-                    OutlinedTextField(
-                        value = repeat,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Repeat") },
-                        leadingIcon = { Icon(Icons.Filled.Notifications, contentDescription = null) },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = repeatExpanded)
-                        },
-                        modifier = Modifier
-                            .menuAnchor(
-                                type = MenuAnchorType.PrimaryNotEditable,
-                                enabled = true
-                            )
-                            .fillMaxWidth()
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = repeatExpanded,
-                        onDismissRequest = {
-                            repeatExpanded = false
-                        }
-                    ) {
-                        repeatOptions.forEach { item ->
-                            DropdownMenuItem(
-                                text = { Text(item) },
-                                onClick = {
-                                    repeat = item
-                                    repeatExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
@@ -715,18 +815,42 @@ private fun AddEditReminderDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    val interval = intervalHours.toIntOrNull() ?: 0
+                    val nextTrigger = calculateNextTriggerMillis(
+                        selectedDate,
+                        selectedTime,
+                        scheduleType,
+                        interval
+                    )
+
                     when {
                         title.isBlank() -> error = "Please enter a reminder title."
                         selectedDate.isBlank() -> error = "Please select a date."
                         selectedTime.isBlank() -> error = "Please select a time."
-                        else -> onSave(
-                            title.trim(),
-                            selectedDate,
-                            selectedTime,
-                            profile,
-                            note.trim(),
-                            repeat
-                        )
+                        scheduleType == "INTERVAL" && interval <= 0 -> {
+                            error = "Please enter a valid interval hour."
+                        }
+                        nextTrigger <= 0L -> {
+                            error = "Invalid reminder schedule."
+                        }
+                        else -> {
+                            onSave(
+                                ReminderEntity(
+                                    id = existingReminder?.id ?: 0,
+                                    title = title.trim(),
+                                    date = selectedDate,
+                                    time = selectedTime,
+                                    profile = profile,
+                                    note = note.trim(),
+                                    repeat = if (scheduleType == "INTERVAL") "Every ${interval}h" else repeat,
+                                    status = existingReminder?.status ?: "Scheduled",
+                                    scheduleType = scheduleType,
+                                    intervalHours = if (scheduleType == "INTERVAL") interval else 0,
+                                    nextTriggerAtMillis = nextTrigger,
+                                    createdAt = existingReminder?.createdAt ?: System.currentTimeMillis()
+                                )
+                            )
+                        }
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = MedGreen)
@@ -752,7 +876,6 @@ private fun AddEditReminderDialog(
                         datePickerState.selectedDateMillis?.let { millis ->
                             selectedDate = formatDate(millis)
                         }
-
                         showDatePicker = false
                     }
                 ) {
@@ -796,7 +919,6 @@ private fun AddEditReminderDialog(
                             hour = timePickerState.hour,
                             minute = timePickerState.minute
                         )
-
                         showTimePicker = false
                     }
                 ) {
@@ -813,6 +935,37 @@ private fun AddEditReminderDialog(
                 }
             }
         )
+    }
+}
+
+private fun calculateNextTriggerMillis(
+    date: String,
+    time: String,
+    scheduleType: String,
+    intervalHours: Int
+): Long {
+    val dateTimeMillis = parseDateTimeMillis(date, time)
+
+    return if (scheduleType == "INTERVAL") {
+        if (dateTimeMillis > System.currentTimeMillis()) {
+            dateTimeMillis
+        } else {
+            System.currentTimeMillis() + intervalHours * 60L * 60L * 1000L
+        }
+    } else {
+        dateTimeMillis
+    }
+}
+
+private fun parseDateTimeMillis(
+    date: String,
+    time: String
+): Long {
+    return try {
+        val formatter = SimpleDateFormat("MMM dd, yyyy h:mm a", Locale.getDefault())
+        formatter.parse("$date $time")?.time ?: 0L
+    } catch (_: Exception) {
+        0L
     }
 }
 

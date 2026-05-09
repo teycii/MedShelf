@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 data class ReminderEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
+
     val title: String,
     val date: String,
     val time: String,
@@ -14,5 +15,14 @@ data class ReminderEntity(
     val note: String,
     val repeat: String,
     val status: String,
+
+    // NEW
+    val scheduleType: String = "DATE_TIME",
+    // DATE_TIME or INTERVAL
+
+    val intervalHours: Int = 0,
+
+    val nextTriggerAtMillis: Long = 0L,
+
     val createdAt: Long = System.currentTimeMillis()
 )
