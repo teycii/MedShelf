@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.PowerManager
 import android.util.Log
 import com.example.medshelf.data.AppDatabase
 import kotlinx.coroutines.CoroutineScope
@@ -13,6 +14,14 @@ import kotlinx.coroutines.launch
 class ReminderNotificationReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
+        // Acquire a temporary WakeLock to ensure the CPU doesn't sleep before service starts
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        val wakeLock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "MedShelf:AlarmWakeLock"
+        )
+        wakeLock.acquire(10 * 1000L) // 10 seconds is plenty to start the service
+
         val action = intent.action
         Log.d("MedShelf_Receiver", "Received action: $action")
 

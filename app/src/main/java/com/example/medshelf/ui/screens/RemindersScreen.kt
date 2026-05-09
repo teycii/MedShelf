@@ -34,14 +34,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.delay
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.medshelf.model.ReminderEntity
 import com.example.medshelf.viewmodel.ReminderViewModel
@@ -70,6 +74,15 @@ fun RemindersScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val reminders by reminderViewModel.reminders.collectAsState()
+    
+    // Ticker to update "time left" every minute
+    var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60000)
+            currentTime = System.currentTimeMillis()
+        }
+    }
 
     val showDialog = remember { mutableStateOf(false) }
     val editingReminder = remember { mutableStateOf<ReminderEntity?>(null) }
@@ -153,7 +166,7 @@ fun RemindersScreen(
             }
 
             item {
-                NextReminderCard(reminder = nextReminder)
+                NextReminderCard(reminder = nextReminder, currentTime = currentTime)
             }
 
             item {
@@ -176,6 +189,7 @@ fun RemindersScreen(
                 ) { reminder ->
                     ReminderCard(
                         reminder = reminder,
+                        currentTime = currentTime,
                         onEdit = {
                             editingReminder.value = reminder
                             showDialog.value = true
@@ -286,7 +300,7 @@ private fun ReminderHeader(count: Int) {
 }
 
 @Composable
-private fun NextReminderCard(reminder: ReminderEntity?) {
+private fun NextReminderCard(reminder: ReminderEntity?, currentTime: Long) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -331,28 +345,33 @@ private fun NextReminderCard(reminder: ReminderEntity?) {
                     overflow = TextOverflow.Ellipsis
                 )
 
+                val timeStatus = reminder?.let { formatTimeStatus(it.nextTriggerAtMillis, currentTime) }
+                
                 Text(
                     text = reminder?.let {
-                        if (it.scheduleType == SCHEDULE_INTERVAL) {
+                        val details = if (it.scheduleType == SCHEDULE_INTERVAL) {
                             "Every ${it.intervalHours} hour(s) • ${it.profile}"
                         } else {
                             "${it.date}, ${it.time} • ${it.profile}"
                         }
+                        if (timeStatus != null) "$timeStatus\n$details" else details
                     } ?: "Add your first reminder",
                     style = MaterialTheme.typography.bodySmall,
-                    color = SoftText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    color = if (timeStatus?.startsWith("Overdue") == true) ErrorRed else SoftText,
+                    lineHeight = 16.sp
                 )
             }
 
             Surface(
-                color = Color.White,
+                color = if ((reminder?.nextTriggerAtMillis ?: 0) < currentTime && reminder?.status != STATUS_COMPLETED) 
+                    ErrorRed.copy(alpha = 0.1f) else Color.White,
                 shape = RoundedCornerShape(50.dp)
             ) {
                 Text(
-                    text = reminder?.status ?: "Empty",
-                    color = MedGreen,
+                    text = if ((reminder?.nextTriggerAtMillis ?: 0) < currentTime && reminder?.status != STATUS_COMPLETED) 
+                        "Overdue" else reminder?.status ?: "Empty",
+                    color = if ((reminder?.nextTriggerAtMillis ?: 0) < currentTime && reminder?.status != STATUS_COMPLETED)
+                        ErrorRed else MedGreen,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
@@ -365,25 +384,28 @@ private fun NextReminderCard(reminder: ReminderEntity?) {
 @Composable
 private fun ReminderCard(
     reminder: ReminderEntity,
+    currentTime: Long,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onComplete: () -> Unit,
     onRestore: () -> Unit
 ) {
     val menuExpanded = remember { mutableStateOf(false) }
+    val isOverdue = reminder.nextTriggerAtMillis < currentTime && reminder.status != STATUS_COMPLETED
+    val timeStatus = formatTimeStatus(reminder.nextTriggerAtMillis, currentTime)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (isOverdue) ErrorRed.copy(alpha = 0.5f) else SoftBorder)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ReminderIcon(status = reminder.status)
+            ReminderIcon(status = if (isOverdue) "Overdue" else reminder.status)
 
             Spacer(modifier = Modifier.width(14.dp))
 
@@ -392,10 +414,19 @@ private fun ReminderCard(
                     text = reminder.title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = DarkText,
+                    color = if (isOverdue) ErrorRed else DarkText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                if (timeStatus.isNotBlank()) {
+                    Text(
+                        text = timeStatus,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isOverdue) ErrorRed else MedGreen,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
 
                 if (reminder.scheduleType == SCHEDULE_INTERVAL) {
                     InfoLine(Icons.Filled.Schedule, "Every ${reminder.intervalHours} hour(s)")
@@ -710,9 +741,27 @@ private fun AddEditReminderDialog(
     val scheduleOptions = listOf(SCHEDULE_DATE_TIME, SCHEDULE_INTERVAL)
 
     val datePickerState = rememberDatePickerState()
+    
+    // Parse existing time for the picker
+    val initialTime = remember(existingReminder?.id) {
+        if (existingReminder != null) {
+            try {
+                val sdf = SimpleDateFormat("h:mm a", Locale.getDefault())
+                val date = sdf.parse(existingReminder.time)
+                val calendar = java.util.Calendar.getInstance()
+                if (date != null) calendar.time = date
+                Pair(calendar.get(java.util.Calendar.HOUR_OF_DAY), calendar.get(java.util.Calendar.MINUTE))
+            } catch (e: Exception) {
+                Pair(8, 0)
+            }
+        } else {
+            Pair(8, 0)
+        }
+    }
+
     val timePickerState = rememberTimePickerState(
-        initialHour = 8,
-        initialMinute = 0,
+        initialHour = initialTime.first,
+        initialMinute = initialTime.second,
         is24Hour = false
     )
 
@@ -1186,4 +1235,32 @@ private fun formatTime(hour: Int, minute: Int): String {
     }
 
     return "$displayHour:${minute.toString().padStart(2, '0')} $amPm"
+}
+
+private fun formatTimeStatus(triggerMillis: Long, currentMillis: Long): String {
+    if (triggerMillis <= 0) return ""
+    
+    val diff = triggerMillis - currentMillis
+    val absDiff = kotlin.math.abs(diff)
+    val minutes = (absDiff / 60000) % 60
+    val hours = (absDiff / 3600000) % 24
+    val days = (absDiff / 86400000)
+
+    val timeStr = when {
+        days > 0 -> "$days d $hours h left"
+        hours > 0 -> "$hours h $minutes m left"
+        minutes > 0 -> "$minutes m left"
+        else -> "Due now"
+    }
+
+    return if (diff < 0) {
+        val overdueStr = when {
+            days > 0 -> "$days d $hours h"
+            hours > 0 -> "$hours h $minutes m"
+            else -> "$minutes m"
+        }
+        "Overdue by $overdueStr"
+    } else {
+        timeStr
+    }
 }

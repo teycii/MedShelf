@@ -7,6 +7,8 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build.VERSION.SDK_INT
@@ -15,6 +17,7 @@ import android.os.Build.VERSION_CODES.S
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -95,6 +98,8 @@ class ReminderAlarmService : Service() {
     }
 
     private fun startVibration() {
+        vibrator?.cancel() // Stop any previous vibration
+
         vibrator = if (SDK_INT >= S) {
             val vibratorManager =
                 getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
@@ -104,20 +109,18 @@ class ReminderAlarmService : Service() {
             getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
 
-        val pattern = longArrayOf(
-            0,
-            1000,
-            500,
-            1000,
-            500,
-            1500,
-            700
-        )
+        val pattern = longArrayOf(0, 1000, 500, 1000, 500, 1500, 700)
 
         if (SDK_INT >= O) {
-            vibrator?.vibrate(
-                VibrationEffect.createWaveform(pattern, 0)
-            )
+            val effect = VibrationEffect.createWaveform(pattern, 0)
+            if (SDK_INT >= 33) {
+                val attributes = VibrationAttributes.Builder()
+                    .setUsage(VibrationAttributes.USAGE_ALARM)
+                    .build()
+                vibrator?.vibrate(effect, attributes)
+            } else {
+                vibrator?.vibrate(effect)
+            }
         } else {
             @Suppress("DEPRECATION")
             vibrator?.vibrate(pattern, 0)
@@ -125,11 +128,27 @@ class ReminderAlarmService : Service() {
     }
 
     private fun startSound() {
-        val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        ringtone?.stop() // Stop any previous sound
 
-        ringtone = RingtoneManager.getRingtone(this, alarmUri)
-        ringtone?.play()
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val ringerMode = audioManager.ringerMode
+
+        // Only play sound if NOT in Silent or Vibrate mode
+        if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
+            val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
+            ringtone = RingtoneManager.getRingtone(this, alarmUri)
+
+            // Set to USAGE_NOTIFICATION so it respects notification volume and silent mode
+            val attributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            ringtone?.audioAttributes = attributes
+
+            ringtone?.play()
+        }
     }
 
     private fun stopAlarm() {
