@@ -1,7 +1,10 @@
 package com.example.medshelf.ui.screens
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -65,6 +68,7 @@ fun RemindersScreen(
     navController: NavController,
     reminderViewModel: ReminderViewModel
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val reminders by reminderViewModel.reminders.collectAsState()
 
     val showDialog = remember { mutableStateOf(false) }
@@ -78,6 +82,16 @@ fun RemindersScreen(
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = context.getSystemService(android.app.AlarmManager::class.java)
+            if (!alarmManager.canScheduleExactAlarms()) {
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    data = Uri.fromParts("package", context.packageName, null)
+                }
+                context.startActivity(intent)
+            }
         }
     }
 
@@ -1128,15 +1142,20 @@ private fun calculateNextTriggerMillis(
     intervalHours: Int
 ): Long {
     val dateTimeMillis = parseDateTimeMillis(date, time)
+    val now = System.currentTimeMillis()
 
     return if (scheduleType == SCHEDULE_INTERVAL) {
-        if (dateTimeMillis > System.currentTimeMillis()) {
+        if (dateTimeMillis > now) {
             dateTimeMillis
         } else {
-            System.currentTimeMillis() + intervalHours * 60L * 60L * 1000L
+            // If start time is in the past, find the next interval slot
+            val diff = now - dateTimeMillis
+            val intervalsPassed = (diff / (intervalHours * 3600000L)) + 1
+            dateTimeMillis + (intervalsPassed * intervalHours * 3600000L)
         }
     } else {
-        dateTimeMillis
+        // For specific date/time, if it's in the past, we should ideally not allow it or return -1
+        if (dateTimeMillis < now) -1L else dateTimeMillis
     }
 }
 
