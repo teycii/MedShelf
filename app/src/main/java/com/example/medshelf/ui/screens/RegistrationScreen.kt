@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -20,27 +21,8 @@ import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Sick
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -49,7 +31,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.medshelf.R
@@ -75,63 +56,22 @@ fun RegistrationScreen(
     var medications by remember { mutableStateOf("") }
     var emergencyContactName by remember { mutableStateOf("") }
     var emergencyContactNumber by remember { mutableStateOf("") }
-
     var showErrors by remember { mutableStateOf(false) }
 
-    val nameRegex = Regex("^[A-Za-z ]+$")
-    val phoneRegex = Regex("^09\\d{9}$")
-
-    val validFirstName by remember {
-        derivedStateOf { firstName.trim().matches(nameRegex) }
-    }
-
-    val validLastName by remember {
-        derivedStateOf { lastName.trim().matches(nameRegex) }
-    }
-
-    val validAge by remember {
-        derivedStateOf {
-            age.toIntOrNull()?.let { it in 1..120 } ?: false
-        }
-    }
-
-    val validEmergencyName by remember {
-        derivedStateOf { emergencyContactName.trim().matches(nameRegex) }
-    }
-
-    val validEmergencyNumber by remember {
-        derivedStateOf { emergencyContactNumber.trim().matches(phoneRegex) }
-    }
-
-    val firstNameError = showErrors && !validFirstName
-    val lastNameError = showErrors && !validLastName
-    val ageError = showErrors && !validAge
+    val firstNameError = showErrors && !isValidName(firstName)
+    val lastNameError = showErrors && !isValidName(lastName)
+    val ageError = showErrors && !isValidAge(age)
     val bloodTypeError = showErrors && bloodType.isBlank()
-    val emergencyNameError = showErrors && !validEmergencyName
-    val emergencyNumberError = showErrors && !validEmergencyNumber
+    val emergencyNameError = showErrors && !isValidName(emergencyContactName)
+    val emergencyNumberError = showErrors && !isValidPhoneNumber(emergencyContactNumber)
 
-    val formIsValid =
-        validFirstName &&
-                validLastName &&
-                validAge &&
-                bloodType.isNotBlank() &&
-                validEmergencyName &&
-                validEmergencyNumber
-
-    Scaffold(
-        containerColor = Color.Transparent
-    ) { paddingValues ->
-
+    Scaffold(containerColor = Color.Transparent) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White,
-                            Color.White,
-                            Color(0xFFEFFFF8)
-                        )
+                        listOf(Color.White, Color.White, Color(0xFFEFFFF8))
                     )
                 )
                 .padding(paddingValues)
@@ -145,13 +85,9 @@ fun RegistrationScreen(
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 BrandHeader()
-
                 HeroHeader()
 
-                RegistrationSection(
-                    title = "Personal Info",
-                    icon = Icons.Filled.Person
-                ) {
+                RegistrationSection("Personal Info", Icons.Filled.Person) {
                     ModernInputField(
                         label = "First Name",
                         value = firstName,
@@ -177,7 +113,7 @@ fun RegistrationScreen(
                         keyboardType = KeyboardType.Number,
                         isError = ageError,
                         errorText = "Enter a valid age from 1 to 120.",
-                        onChange = { age = it.filter { char -> char.isDigit() } }
+                        onChange = { age = it.filter { char -> char.isDigit() }.take(3) }
                     )
 
                     BloodTypeDropdown(
@@ -187,10 +123,7 @@ fun RegistrationScreen(
                     )
                 }
 
-                RegistrationSection(
-                    title = "Medical Info",
-                    icon = Icons.Filled.HealthAndSafety
-                ) {
+                RegistrationSection("Medical Info", Icons.Filled.HealthAndSafety) {
                     ModernInputField(
                         label = "Allergies",
                         value = allergies,
@@ -213,10 +146,7 @@ fun RegistrationScreen(
                     )
                 }
 
-                RegistrationSection(
-                    title = "Emergency Contact",
-                    icon = Icons.Filled.Phone
-                ) {
+                RegistrationSection("Emergency Contact", Icons.Filled.Phone) {
                     ModernInputField(
                         label = "Contact Name",
                         value = emergencyContactName,
@@ -256,7 +186,15 @@ fun RegistrationScreen(
                     onClick = {
                         showErrors = true
 
-                        if (formIsValid) {
+                        val isFormValid =
+                            isValidName(firstName) &&
+                                    isValidName(lastName) &&
+                                    isValidAge(age) &&
+                                    bloodType.isNotBlank() &&
+                                    isValidName(emergencyContactName) &&
+                                    isValidPhoneNumber(emergencyContactNumber)
+
+                        if (isFormValid) {
                             userViewModel.saveUser(
                                 firstName = firstName.trim(),
                                 lastName = lastName.trim(),
@@ -280,9 +218,7 @@ fun RegistrationScreen(
                         .fillMaxWidth()
                         .height(58.dp),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MedGreen
-                    )
+                    colors = ButtonDefaults.buttonColors(containerColor = MedGreen)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.HealthAndSafety,
@@ -292,21 +228,28 @@ fun RegistrationScreen(
 
                     Spacer(modifier = Modifier.width(10.dp))
 
-                    Text(
-                        text = "Save Profile",
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Save Profile", fontWeight = FontWeight.Bold)
                 }
             }
         }
     }
 }
 
+private fun isValidName(value: String): Boolean {
+    return value.trim().matches(Regex("^[A-Za-z ]+$"))
+}
+
+private fun isValidAge(value: String): Boolean {
+    return value.toIntOrNull()?.let { it in 1..120 } ?: false
+}
+
+private fun isValidPhoneNumber(value: String): Boolean {
+    return value.trim().matches(Regex("^09\\d{9}$"))
+}
+
 @Composable
 private fun BrandHeader() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Image(
             painter = painterResource(id = R.drawable.ic_medshelf_logo),
             contentDescription = "MedShelf Logo",
@@ -337,9 +280,7 @@ private fun HeroHeader() {
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "Set Up Your\nMedical Profile",
                 style = MaterialTheme.typography.headlineMedium,
@@ -376,10 +317,7 @@ private fun HeroHeader() {
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-                border = androidx.compose.foundation.BorderStroke(
-                    width = 1.dp,
-                    color = SoftBorder
-                )
+                border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
             ) {
                 Column(
                     modifier = Modifier
@@ -450,22 +388,15 @@ private fun RegistrationSection(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = SoftBorder
-        )
+        border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
@@ -511,9 +442,7 @@ private fun BloodTypeDropdown(
     Column {
         ExposedDropdownMenuBox(
             expanded = expanded,
-            onExpandedChange = {
-                expanded = !expanded
-            }
+            onExpandedChange = { expanded = !expanded }
         ) {
             OutlinedTextField(
                 value = value,
@@ -527,10 +456,7 @@ private fun BloodTypeDropdown(
                         enabled = true
                     ),
                 placeholder = {
-                    Text(
-                        text = "Blood Type",
-                        color = SoftText
-                    )
+                    Text("Blood Type", color = SoftText)
                 },
                 leadingIcon = {
                     Icon(
@@ -541,9 +467,7 @@ private fun BloodTypeDropdown(
                     )
                 },
                 trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(
-                        expanded = expanded
-                    )
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                 },
                 singleLine = true,
                 isError = isError,
@@ -560,9 +484,7 @@ private fun BloodTypeDropdown(
 
             ExposedDropdownMenu(
                 expanded = expanded,
-                onDismissRequest = {
-                    expanded = false
-                }
+                onDismissRequest = { expanded = false }
             ) {
                 bloodTypes.forEach { item ->
                     DropdownMenuItem(
@@ -607,10 +529,7 @@ private fun ModernInputField(
                 .fillMaxWidth()
                 .height(58.dp),
             placeholder = {
-                Text(
-                    text = label,
-                    color = SoftText
-                )
+                Text(label, color = SoftText)
             },
             leadingIcon = {
                 Icon(
@@ -621,9 +540,7 @@ private fun ModernInputField(
                 )
             },
             singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = keyboardType
-            ),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             isError = isError,
             shape = RoundedCornerShape(13.dp),
             colors = OutlinedTextFieldDefaults.colors(
