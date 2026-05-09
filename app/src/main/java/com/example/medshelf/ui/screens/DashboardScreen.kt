@@ -13,6 +13,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -24,7 +26,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.medshelf.R
+import com.example.medshelf.model.DocumentEntity
+import com.example.medshelf.model.ReminderEntity
+import com.example.medshelf.viewmodel.DocumentViewModel
+import com.example.medshelf.viewmodel.ReminderViewModel
 import com.example.medshelf.viewmodel.UserViewModel
+import java.util.Calendar
 
 private val MedGreen = Color(0xFF009688)
 private val DarkText = Color(0xFF111827)
@@ -33,18 +40,31 @@ private val SoftBorder = Color(0xFFE2E8F0)
 private val Purple = Color(0xFF7C3AED)
 private val Orange = Color(0xFFF59E0B)
 
+private const val STATUS_COMPLETED = "Completed"
+
 @Composable
 fun DashboardScreen(
     navController: NavController,
-    userViewModel: UserViewModel
+    userViewModel: UserViewModel,
+    documentViewModel: DocumentViewModel,
+    reminderViewModel: ReminderViewModel
 ) {
     val user = userViewModel.user.value
+    val documents by documentViewModel.documents.collectAsState()
+    val reminders by reminderViewModel.reminders.collectAsState()
+
     val firstName = user?.firstName ?: "User"
     val bloodType = user?.bloodType ?: "Not set"
 
+    val recentDocuments = documents.take(3)
+    val activeReminders = reminders.filter { it.status != STATUS_COMPLETED }
+    val upcomingReminder = activeReminders.minByOrNull { it.nextTriggerAtMillis }
+
     Scaffold(
         containerColor = Color.Transparent,
-        bottomBar = { MedShelfBottomBar(navController) }
+        bottomBar = {
+            MedShelfBottomBar(navController)
+        }
     ) { paddingValues ->
 
         Box(
@@ -53,7 +73,7 @@ fun DashboardScreen(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFFFFFFFF),
+                            Color.White,
                             Color(0xFFF8FFFC),
                             Color(0xFFEFFFF8)
                         )
@@ -77,6 +97,13 @@ fun DashboardScreen(
                 }
 
                 item {
+                    DashboardStatsRow(
+                        documentCount = documents.size,
+                        reminderCount = activeReminders.size
+                    )
+                }
+
+                item {
                     EmergencySnapshotBanner {
                         navController.navigate("emergency_snapshot")
                     }
@@ -95,7 +122,7 @@ fun DashboardScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         QuickActionCard(
                             title = "Documents",
-                            subtitle = "View files",
+                            subtitle = "${documents.size} saved",
                             icon = Icons.Outlined.Folder,
                             bgColor = Color(0xFFE6F7F4),
                             iconColor = MedGreen,
@@ -121,7 +148,7 @@ fun DashboardScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         QuickActionCard(
                             title = "Reminders",
-                            subtitle = "Medication",
+                            subtitle = "${activeReminders.size} active",
                             icon = Icons.Outlined.Notifications,
                             bgColor = Color(0xFFF0EAFE),
                             iconColor = Purple,
@@ -151,17 +178,30 @@ fun DashboardScreen(
                 }
 
                 item {
-                    UpcomingReminderHighlight()
+                    UpcomingReminderHighlight(
+                        reminder = upcomingReminder,
+                        onClick = {
+                            navController.navigate("reminders")
+                        }
+                    )
                 }
 
                 item {
-                    RecentDocumentsCard(navController)
+                    RecentDocumentsCard(
+                        navController = navController,
+                        recentDocuments = recentDocuments
+                    )
                 }
 
                 item {
-                    HealthSummaryCard {
-                        navController.navigate("edit_profile")
-                    }
+                    HealthSummaryCard(
+                        allergies = user?.allergies ?: "Not set",
+                        conditions = user?.conditions ?: "Not set",
+                        medications = user?.medications ?: "Not set",
+                        onClick = {
+                            navController.navigate("edit_profile")
+                        }
+                    )
                 }
             }
         }
@@ -198,16 +238,12 @@ private fun DashboardHeader(navController: NavController) {
 
         Spacer(modifier = Modifier.weight(1f))
 
-        IconButton(onClick = { }) {
-            BadgedBox(
-                badge = { Badge(containerColor = MedGreen) }
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Notifications,
-                    contentDescription = "Notifications",
-                    tint = SoftText
-                )
-            }
+        IconButton(onClick = { navController.navigate("reminders") }) {
+            Icon(
+                imageVector = Icons.Outlined.Notifications,
+                contentDescription = "Notifications",
+                tint = SoftText
+            )
         }
 
         Box(
@@ -229,7 +265,7 @@ private fun DashboardHeader(navController: NavController) {
 
 @Composable
 private fun GreetingSection(firstName: String) {
-    val greeting = when (java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)) {
+    val greeting = when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
         in 0..11 -> "Good morning"
         in 12..17 -> "Good afternoon"
         else -> "Good evening"
@@ -247,10 +283,84 @@ private fun GreetingSection(firstName: String) {
     Spacer(modifier = Modifier.height(4.dp))
 
     Text(
-        text = "Here’s your health overview for today.",
+        text = "Here’s your health overview from your saved records.",
         style = MaterialTheme.typography.bodyMedium,
         color = SoftText
     )
+}
+
+@Composable
+private fun DashboardStatsRow(
+    documentCount: Int,
+    reminderCount: Int
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        StatCard(
+            title = "Documents",
+            value = documentCount.toString(),
+            icon = Icons.Filled.Description,
+            color = MedGreen,
+            modifier = Modifier.weight(1f)
+        )
+
+        StatCard(
+            title = "Active Reminders",
+            value = reminderCount.toString(),
+            icon = Icons.Filled.Notifications,
+            color = Purple,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun StatCard(
+    title: String,
+    value: String,
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.height(92.dp),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(color.copy(alpha = 0.12f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = color)
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column {
+                Text(
+                    text = value,
+                    color = DarkText,
+                    fontWeight = FontWeight.ExtraBold,
+                    style = MaterialTheme.typography.titleLarge
+                )
+
+                Text(
+                    text = title,
+                    color = SoftText,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -310,11 +420,7 @@ private fun EmergencySnapshotBanner(onClick: () -> Unit) {
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "View",
-                        color = MedGreen,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("View", color = MedGreen, fontWeight = FontWeight.Bold)
 
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
@@ -403,32 +509,16 @@ private fun ProfilesCard(
         border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            SectionTitle(
-                title = "Profiles",
-                onClick = {}
-            )
+            SectionTitle(title = "Profiles", onClick = {})
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                ProfileMiniCard(
-                    name = userName,
-                    info = "Main profile • $bloodType",
-                    selected = true,
-                    modifier = Modifier.weight(1.45f),
-                    isYou = true
-                )
-
-                ProfileMiniCard(
-                    name = "Family",
-                    info = "Add member",
-                    selected = false,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            ProfileMiniCard(
+                name = userName,
+                info = "Main profile • $bloodType",
+                selected = true,
+                isYou = true
+            )
         }
     }
 }
@@ -442,7 +532,9 @@ private fun ProfileMiniCard(
     isYou: Boolean = false
 ) {
     Card(
-        modifier = modifier.height(76.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(76.dp),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         border = androidx.compose.foundation.BorderStroke(
@@ -463,7 +555,7 @@ private fun ProfileMiniCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (selected) Icons.Default.Person else Icons.Default.PersonAdd,
+                    imageVector = Icons.Default.Person,
                     contentDescription = null,
                     tint = MedGreen,
                     modifier = Modifier.size(21.dp)
@@ -518,9 +610,14 @@ private fun ProfileMiniCard(
 }
 
 @Composable
-private fun UpcomingReminderHighlight() {
+private fun UpcomingReminderHighlight(
+    reminder: ReminderEntity?,
+    onClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF6FFFC)),
         elevation = CardDefaults.cardElevation(2.dp),
@@ -560,13 +657,21 @@ private fun UpcomingReminderHighlight() {
 
                     Column {
                         Text(
-                            text = "Take Vitamin D",
+                            text = reminder?.title ?: "No active reminder",
                             fontWeight = FontWeight.Bold,
-                            color = DarkText
+                            color = DarkText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
 
                         Text(
-                            text = "Today, 8:00 AM",
+                            text = reminder?.let {
+                                if (it.scheduleType == "INTERVAL") {
+                                    "Every ${it.intervalHours} hour(s) • Starts ${it.time}"
+                                } else {
+                                    "${it.date}, ${it.time}"
+                                }
+                            } ?: "Tap to add medication reminder",
                             color = SoftText,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -574,35 +679,21 @@ private fun UpcomingReminderHighlight() {
                 }
             }
 
-            Surface(
-                color = Color(0xFFF0EAFE),
-                shape = RoundedCornerShape(50.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Due soon",
-                        color = Purple,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = Purple,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Purple,
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }
 
 @Composable
-private fun RecentDocumentsCard(navController: NavController) {
+private fun RecentDocumentsCard(
+    navController: NavController,
+    recentDocuments: List<DocumentEntity>
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
@@ -618,41 +709,41 @@ private fun RecentDocumentsCard(navController: NavController) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            DocumentRow(
-                title = "Blood Test Report",
-                subtitle = "May 18, 2024 • PDF • $CURRENT_PROFILE_LABEL",
-                icon = Icons.Outlined.Description,
-                iconBg = Color(0xFFE6F7F4),
-                iconColor = MedGreen
-            )
+            if (recentDocuments.isEmpty()) {
+                Text(
+                    text = "No documents yet. Upload your first medical document.",
+                    color = SoftText,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            } else {
+                recentDocuments.forEachIndexed { index, document ->
+                    DocumentRow(
+                        title = document.name.ifBlank { "Untitled Document" },
+                        subtitle = "${document.date.ifBlank { "No date" }} • ${document.type.ifBlank { "Uncategorized" }} • ${document.owner.ifBlank { "Main profile" }}",
+                        icon = categoryIcon(document.type),
+                        iconBg = categoryColor(document.type).copy(alpha = 0.12f),
+                        iconColor = categoryColor(document.type),
+                        onClick = {
+                            navController.navigate("document_details/${document.id}")
+                        }
+                    )
 
-            HorizontalDivider(color = SoftBorder)
-
-            DocumentRow(
-                title = "Chest X-Ray",
-                subtitle = "May 10, 2024 • JPG • Family",
-                icon = Icons.Filled.MonitorHeart,
-                iconBg = Color(0xFFF0EAFE),
-                iconColor = Purple
-            )
-
-            HorizontalDivider(color = SoftBorder)
-
-            DocumentRow(
-                title = "Vaccination Record",
-                subtitle = "Apr 28, 2024 • PDF • Family",
-                icon = Icons.Filled.Vaccines,
-                iconBg = Color(0xFFFFF4D8),
-                iconColor = Orange
-            )
+                    if (index != recentDocuments.lastIndex) {
+                        HorizontalDivider(color = SoftBorder)
+                    }
+                }
+            }
         }
     }
 }
 
-private const val CURRENT_PROFILE_LABEL = "Main profile"
-
 @Composable
-private fun HealthSummaryCard(onClick: () -> Unit) {
+private fun HealthSummaryCard(
+    allergies: String,
+    conditions: String,
+    medications: String,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -679,15 +770,27 @@ private fun HealthSummaryCard(onClick: () -> Unit) {
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "Information is ready for quick access.",
+                    text = "Allergies: ${allergies.ifBlank { "Not set" }}",
                     color = DarkText,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 Text(
-                    text = "Last updated: Today",
+                    text = "Conditions: ${conditions.ifBlank { "Not set" }}",
                     color = SoftText,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = "Meds: ${medications.ifBlank { "Not set" }}",
+                    color = SoftText,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -777,11 +880,13 @@ private fun DocumentRow(
     subtitle: String,
     icon: ImageVector,
     iconBg: Color,
-    iconColor: Color
+    iconColor: Color,
+    onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() }
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -821,9 +926,43 @@ private fun DocumentRow(
         }
 
         Icon(
-            imageVector = Icons.Default.MoreVert,
+            imageVector = Icons.Default.ChevronRight,
             contentDescription = null,
             tint = SoftText
         )
+    }
+}
+
+private fun categoryIcon(type: String): ImageVector {
+    return when {
+        type.contains("Lab", ignoreCase = true) -> Icons.Default.Biotech
+        type.contains("Prescription", ignoreCase = true) -> Icons.Default.Medication
+        type.contains("Certificate", ignoreCase = true) -> Icons.Default.Badge
+        type.contains("X-Ray", ignoreCase = true) || type.contains("Imaging", ignoreCase = true) -> Icons.Default.MonitorHeart
+        type.contains("Vaccination", ignoreCase = true) -> Icons.Default.Vaccines
+        type.contains("Discharge", ignoreCase = true) -> Icons.Default.LocalHospital
+        type.contains("Bill", ignoreCase = true) -> Icons.Default.ReceiptLong
+        type.contains("Insurance", ignoreCase = true) -> Icons.Default.Shield
+        type.contains("Note", ignoreCase = true) -> Icons.Default.NoteAlt
+        type.contains("Clearance", ignoreCase = true) -> Icons.Default.HealthAndSafety
+        type.contains("ECG", ignoreCase = true) || type.contains("Heart", ignoreCase = true) -> Icons.Default.Favorite
+        else -> Icons.Default.Description
+    }
+}
+
+private fun categoryColor(type: String): Color {
+    return when {
+        type.contains("Lab", ignoreCase = true) -> Color(0xFF0EA5E9)
+        type.contains("Prescription", ignoreCase = true) -> Color(0xFF7C3AED)
+        type.contains("Certificate", ignoreCase = true) -> Color(0xFFF59E0B)
+        type.contains("X-Ray", ignoreCase = true) || type.contains("Imaging", ignoreCase = true) -> Color(0xFF6366F1)
+        type.contains("Vaccination", ignoreCase = true) -> Color(0xFF16A34A)
+        type.contains("Discharge", ignoreCase = true) -> Color(0xFFEF4444)
+        type.contains("Bill", ignoreCase = true) -> Color(0xFFEA580C)
+        type.contains("Insurance", ignoreCase = true) -> Color(0xFF0891B2)
+        type.contains("Note", ignoreCase = true) -> Color(0xFF8B5CF6)
+        type.contains("Clearance", ignoreCase = true) -> Color(0xFF14B8A6)
+        type.contains("ECG", ignoreCase = true) || type.contains("Heart", ignoreCase = true) -> Color(0xFFE11D48)
+        else -> MedGreen
     }
 }

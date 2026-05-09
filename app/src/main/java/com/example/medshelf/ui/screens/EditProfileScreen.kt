@@ -417,7 +417,7 @@ private fun ProfileBloodTypeDropdown(
     isError: Boolean,
     onChange: (String) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember(value) { mutableStateOf(false) }
 
     val bloodTypes = listOf(
         "A+",
