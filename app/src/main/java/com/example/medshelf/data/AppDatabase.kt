@@ -6,15 +6,17 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.medshelf.model.DocumentEntity
 import com.example.medshelf.model.NoteEntity
+import com.example.medshelf.model.ReminderEntity
 import com.example.medshelf.model.UserEntity
 
 @Database(
     entities = [
         UserEntity::class,
         DocumentEntity::class,
-        NoteEntity::class
+        NoteEntity::class,
+        ReminderEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -25,15 +27,15 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun noteDao(): NoteDao
 
+    abstract fun reminderDao(): ReminderDao
+
     companion object {
 
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
         fun getDatabase(context: Context): AppDatabase {
-
             return INSTANCE ?: synchronized(this) {
-
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,

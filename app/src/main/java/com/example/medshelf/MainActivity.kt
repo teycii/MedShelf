@@ -20,6 +20,7 @@ import com.example.medshelf.ui.screens.*
 import com.example.medshelf.ui.theme.MedShelfTheme
 import com.example.medshelf.viewmodel.DocumentViewModel
 import com.example.medshelf.viewmodel.NoteViewModel
+import com.example.medshelf.viewmodel.ReminderViewModel
 import com.example.medshelf.viewmodel.UserViewModel
 import com.example.medshelf.viewmodel.UserViewModelFactory
 
@@ -44,6 +45,7 @@ fun MedShelfApp(database: AppDatabase) {
 
     val documentViewModel: DocumentViewModel = viewModel()
     val noteViewModel: NoteViewModel = viewModel()
+    val reminderViewModel: ReminderViewModel = viewModel()
 
     val userViewModel: UserViewModel = viewModel(
         factory = UserViewModelFactory(database.userDao())
@@ -155,7 +157,8 @@ fun MedShelfApp(database: AppDatabase) {
 
         composable("reminders") {
             RemindersScreen(
-                navController = navController
+                navController = navController,
+                reminderViewModel = reminderViewModel
             )
         }
 
