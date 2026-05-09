@@ -16,12 +16,8 @@ data class ReminderEntity(
     val repeat: String,
     val status: String,
 
-    // NEW
     val scheduleType: String = "DATE_TIME",
-    // DATE_TIME or INTERVAL
-
     val intervalHours: Int = 0,
-
     val nextTriggerAtMillis: Long = 0L,
 
     val createdAt: Long = System.currentTimeMillis()
