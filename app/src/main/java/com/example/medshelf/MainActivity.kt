@@ -99,7 +99,9 @@ fun MedShelfApp(database: AppDatabase) {
         composable("dashboard") {
             DashboardScreen(
                 navController = navController,
-                userViewModel = userViewModel
+                userViewModel = userViewModel,
+                documentViewModel = documentViewModel,
+                reminderViewModel = reminderViewModel
             )
         }
 
