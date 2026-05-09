@@ -12,11 +12,16 @@
     <!-- REMINDER NOTIFICATIONS -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
-    <!-- Required for foreground services on all supported Android versions -->
+    <!-- FOREGROUND SERVICE FOR MEDICAL ALARM -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- Required for specific service types on Android 14+ -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" tools:targetApi="34" />
+
+    <!-- REQUIRED FOR FOREGROUND SERVICE TYPE ON ANDROID 14+ -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        tools:targetApi="34" />
+
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application

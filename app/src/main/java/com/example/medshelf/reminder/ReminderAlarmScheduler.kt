@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import com.example.medshelf.model.ReminderEntity
 
 object ReminderAlarmScheduler {
@@ -12,9 +13,15 @@ object ReminderAlarmScheduler {
         context: Context,
         reminder: ReminderEntity
     ) {
-        if (reminder.nextTriggerAtMillis <= System.currentTimeMillis()) return
+        if (reminder.nextTriggerAtMillis <= System.currentTimeMillis()) {
+            return
+        }
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+            return
+        }
 
         val intent = Intent(context, ReminderNotificationReceiver::class.java).apply {
             putExtra("title", reminder.title)
@@ -28,7 +35,7 @@ object ReminderAlarmScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        alarmManager.setAndAllowWhileIdle(
+        alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             reminder.nextTriggerAtMillis,
             pendingIntent
