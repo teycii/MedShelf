@@ -97,7 +97,7 @@ fun DashboardScreen(
                     .fillMaxSize()
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
-                contentPadding = PaddingValues(top = 22.dp, bottom = 110.dp)
+                contentPadding = PaddingValues(top = 18.dp, bottom = 110.dp)
             ) {
                 item {
                     DashboardHeader(navController)
@@ -222,55 +222,96 @@ fun DashboardScreen(
 @Composable
 private fun DashboardHeader(navController: NavController) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_medshelf_logo),
-            contentDescription = "MedShelf Logo",
-            modifier = Modifier.size(40.dp)
-        )
-
-        Spacer(modifier = Modifier.width(10.dp))
-
-        Text(
-            text = "Med",
-            color = MedGreen,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.ExtraBold
-        )
-
-        Text(
-            text = "Shelf",
-            color = DarkText,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.ExtraBold
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        IconButton(onClick = { navController.navigate("reminders") }) {
-            Icon(
-                imageVector = Icons.Outlined.Notifications,
-                contentDescription = "Notifications",
-                tint = SoftText
-            )
-        }
-
         Box(
             modifier = Modifier
-                .size(42.dp)
-                .background(Color(0xFFE6F7F4), CircleShape)
-                .clickable { navController.navigate("edit_profile") },
+                .size(48.dp)
+                .background(Color(0xFFE6F7F4), RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Outlined.AccountCircle,
-                contentDescription = "Profile",
-                tint = MedGreen,
+            Image(
+                painter = painterResource(id = R.drawable.ic_medshelf_logo),
+                contentDescription = "MedShelf Logo",
                 modifier = Modifier.size(30.dp)
             )
         }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Med",
+                    color = MedGreen,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
+
+                Text(
+                    text = "Shelf",
+                    color = DarkText,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+
+            Text(
+                text = "Personal medical library",
+                color = SoftText,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        HeaderIconButton(
+            icon = Icons.Outlined.Notifications,
+            iconColor = SoftText,
+            backgroundColor = Color.White,
+            borderColor = SoftBorder
+        ) {
+            navController.navigate("reminders")
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        HeaderIconButton(
+            icon = Icons.Outlined.AccountCircle,
+            iconColor = MedGreen,
+            backgroundColor = Color(0xFFE6F7F4),
+            borderColor = Color.Transparent
+        ) {
+            navController.navigate("edit_profile")
+        }
+    }
+}
+
+@Composable
+private fun HeaderIconButton(
+    icon: ImageVector,
+    iconColor: Color,
+    backgroundColor: Color,
+    borderColor: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .background(backgroundColor, CircleShape)
+            .border(1.dp, borderColor, CircleShape)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconColor,
+            modifier = Modifier.size(24.dp)
+        )
     }
 }
 
@@ -284,14 +325,14 @@ private fun GreetingSection(firstName: String) {
 
     Text(
         text = "$greeting, $firstName",
-        style = MaterialTheme.typography.titleLarge,
+        style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.ExtraBold,
         color = DarkText,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis
     )
 
-    Spacer(modifier = Modifier.height(4.dp))
+    Spacer(modifier = Modifier.height(3.dp))
 
     Text(
         text = "Here’s your latest health overview from saved records.",
@@ -306,55 +347,67 @@ private fun DashboardStatsRow(
     reminderCount: Int
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        StatCard(
+        StaticOverviewCard(
             title = "Documents",
             value = documentCount.toString(),
+            subtitle = "Saved records",
             icon = Icons.Filled.Description,
             color = MedGreen,
+            backgroundColor = Color(0xFFF2FFFC),
             modifier = Modifier.weight(1f)
         )
 
-        StatCard(
+        StaticOverviewCard(
             title = "Upcoming",
             value = reminderCount.toString(),
+            subtitle = "Reminders",
             icon = Icons.Filled.Notifications,
             color = Purple,
+            backgroundColor = Color(0xFFFBF8FF),
             modifier = Modifier.weight(1f)
         )
     }
 }
 
 @Composable
-private fun StatCard(
+private fun StaticOverviewCard(
     title: String,
     value: String,
+    subtitle: String,
     icon: ImageVector,
     color: Color,
+    backgroundColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.height(92.dp),
+    Surface(
+        modifier = modifier.height(88.dp),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
+        color = backgroundColor,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.22f))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(14.dp),
+                .padding(horizontal = 13.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
-                    .background(color.copy(alpha = 0.12f), RoundedCornerShape(14.dp)),
+                    .size(44.dp)
+                    .background(color.copy(alpha = 0.12f), RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = color)
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(24.dp)
+                )
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(11.dp))
 
             Column {
                 Text(
@@ -366,8 +419,19 @@ private fun StatCard(
 
                 Text(
                     text = title,
+                    color = DarkText,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = subtitle,
                     color = SoftText,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
