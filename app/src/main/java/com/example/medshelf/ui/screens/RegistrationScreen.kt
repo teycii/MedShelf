@@ -232,7 +232,7 @@ fun RegistrationScreen(
                         icon = Icons.Filled.Phone,
                         keyboardType = KeyboardType.Phone,
                         isError = emergencyNumberError,
-                        errorText = "Use PH mobile format: 09XXXXXXXXX.",
+                        errorText = "Use PH mobile format: 09 followed by 9 digits.",
                         onChange = {
                             emergencyContactNumber = it
                                 .filter { char -> char.isDigit() }
