@@ -2,60 +2,17 @@ package com.example.medshelf.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.Bloodtype
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.ContactEmergency
-import androidx.compose.material.icons.filled.HealthAndSafety
-import androidx.compose.material.icons.filled.LocalHospital
-import androidx.compose.material.icons.filled.Medication
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Sick
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -63,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.medshelf.viewmodel.UserViewModel
@@ -143,29 +101,25 @@ fun EditProfileScreen(
                 title = "Basic Information",
                 icon = Icons.Filled.Person
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ProfileInputField(
-                        label = "First Name",
-                        value = firstName,
-                        icon = Icons.Outlined.Person,
-                        placeholder = "First name",
-                        modifier = Modifier.weight(1f),
-                        isError = firstNameError,
-                        errorText = "Use letters only.",
-                        onValueChange = { firstName = it }
-                    )
+                ProfileInputField(
+                    label = "First Name",
+                    value = firstName,
+                    icon = Icons.Outlined.Person,
+                    placeholder = "Enter your first name",
+                    isError = firstNameError,
+                    errorText = "Use letters only.",
+                    onValueChange = { firstName = it }
+                )
 
-                    ProfileInputField(
-                        label = "Last Name",
-                        value = lastName,
-                        icon = Icons.Filled.Badge,
-                        placeholder = "Last name",
-                        modifier = Modifier.weight(1f),
-                        isError = lastNameError,
-                        errorText = "Use letters only.",
-                        onValueChange = { lastName = it }
-                    )
-                }
+                ProfileInputField(
+                    label = "Last Name",
+                    value = lastName,
+                    icon = Icons.Filled.Badge,
+                    placeholder = "Enter your last name",
+                    isError = lastNameError,
+                    errorText = "Use letters only.",
+                    onValueChange = { lastName = it }
+                )
 
                 ProfileInputField(
                     label = "Age",
@@ -360,12 +314,14 @@ private fun ProfileHeaderCard(name: String) {
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name.trim(),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
-                    color = DarkText
+                    color = DarkText,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 Text(
