@@ -81,9 +81,7 @@ fun MedShelfTopBar(
 }
 
 @Composable
-private fun BackButton(
-    onClick: () -> Unit
-) {
+private fun BackButton(onClick: () -> Unit) {
     Surface(
         modifier = Modifier
             .size(42.dp)
@@ -91,10 +89,7 @@ private fun BackButton(
         shape = RoundedCornerShape(14.dp),
         color = Color.White,
         shadowElevation = 1.dp,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            SoftBorder
-        )
+        border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
@@ -130,7 +125,7 @@ fun MedShelfBottomBar(navController: NavController) {
                 label = "Home",
                 icon = Icons.Outlined.Home,
                 selected = currentRoute == "dashboard",
-                onClick = { navigateHome(navController) }
+                onClick = { navigateRoot(navController, "dashboard") }
             )
 
             BottomNavItem(
@@ -140,37 +135,19 @@ fun MedShelfBottomBar(navController: NavController) {
                         currentRoute == "document_library/{owner}" ||
                         currentRoute == "document_details/{documentId}" ||
                         currentRoute == "edit_document/{documentId}",
-                onClick = {
-                    navigateBottom(
-                        navController = navController,
-                        route = "document_library",
-                        currentRoute = currentRoute
-                    )
-                }
+                onClick = { navigateRoot(navController, "document_library") }
             )
 
             CenterAddButton(
                 selected = currentRoute == "add_document",
-                onClick = {
-                    navigateBottom(
-                        navController = navController,
-                        route = "add_document",
-                        currentRoute = currentRoute
-                    )
-                }
+                onClick = { navigateRoot(navController, "add_document") }
             )
 
             BottomNavItem(
                 label = "Reminders",
                 icon = Icons.Outlined.Notifications,
                 selected = currentRoute == "reminders",
-                onClick = {
-                    navigateBottom(
-                        navController = navController,
-                        route = "reminders",
-                        currentRoute = currentRoute
-                    )
-                }
+                onClick = { navigateRoot(navController, "reminders") }
             )
 
             BottomNavItem(
@@ -178,13 +155,7 @@ fun MedShelfBottomBar(navController: NavController) {
                 icon = Icons.Outlined.AccountCircle,
                 selected = currentRoute == "edit_profile" ||
                         currentRoute == "add_family_member",
-                onClick = {
-                    navigateBottom(
-                        navController = navController,
-                        route = "edit_profile",
-                        currentRoute = currentRoute
-                    )
-                }
+                onClick = { navigateRoot(navController, "edit_profile") }
             )
         }
     }
@@ -257,33 +228,22 @@ private fun BottomNavItem(
     }
 }
 
-private fun navigateHome(navController: NavController) {
-    navController.navigate("dashboard") {
-        launchSingleTop = true
-        restoreState = true
-
-        popUpTo("dashboard") {
-            inclusive = false
-            saveState = true
-        }
-    }
-}
-
-private fun navigateBottom(
+private fun navigateRoot(
     navController: NavController,
-    route: String,
-    currentRoute: String?
+    route: String
 ) {
+    val currentRoute = navController.currentBackStackEntry?.destination?.route
     if (currentRoute == route) return
 
     navController.navigate(route) {
         launchSingleTop = true
-        restoreState = true
 
         popUpTo("dashboard") {
-            inclusive = false
-            saveState = true
+            inclusive = route == "dashboard"
+            saveState = false
         }
+
+        restoreState = false
     }
 }
 
@@ -296,13 +256,25 @@ private fun navigateBackFriendly(navController: NavController) {
         "edit_profile",
         "notes",
         "add_document" -> {
-            navigateHome(navController)
+            navigateRoot(navController, "dashboard")
+        }
+
+        "document_details/{documentId}",
+        "edit_document/{documentId}" -> {
+            navController.navigate("document_library") {
+                launchSingleTop = true
+                popUpTo("dashboard") {
+                    inclusive = false
+                    saveState = false
+                }
+                restoreState = false
+            }
         }
 
         else -> {
             val didPop = navController.popBackStack()
             if (!didPop) {
-                navigateHome(navController)
+                navigateRoot(navController, "dashboard")
             }
         }
     }

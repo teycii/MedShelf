@@ -73,18 +73,17 @@ fun MedShelfApp(database: AppDatabase) {
 
             LaunchedEffect(isLoaded, user) {
                 if (isLoaded) {
-                    if (user == null) {
-                        navController.navigate("registration") {
-                            popUpTo("loading") {
-                                inclusive = true
-                            }
-                        }
+                    val destination = if (user == null) {
+                        "registration"
                     } else {
-                        navController.navigate("dashboard") {
-                            popUpTo("loading") {
-                                inclusive = true
-                            }
+                        "dashboard"
+                    }
+
+                    navController.navigate(destination) {
+                        popUpTo("loading") {
+                            inclusive = true
                         }
+                        launchSingleTop = true
                     }
                 }
             }
@@ -199,7 +198,8 @@ fun MedShelfApp(database: AppDatabase) {
         composable("reminders") {
             RemindersScreen(
                 navController = navController,
-                reminderViewModel = reminderViewModel
+                reminderViewModel = reminderViewModel,
+                familyMemberViewModel = familyMemberViewModel
             )
         }
 

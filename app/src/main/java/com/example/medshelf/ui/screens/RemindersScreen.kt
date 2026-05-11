@@ -28,17 +28,9 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import kotlinx.coroutines.delay
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -49,7 +41,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.medshelf.model.ReminderEntity
 import com.example.medshelf.reminder.ReminderUtils
+import com.example.medshelf.viewmodel.FamilyMemberViewModel
 import com.example.medshelf.viewmodel.ReminderViewModel
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -71,13 +65,21 @@ private const val STATUS_SCHEDULED = "Scheduled"
 @Composable
 fun RemindersScreen(
     navController: NavController,
-    reminderViewModel: ReminderViewModel
+    reminderViewModel: ReminderViewModel,
+    familyMemberViewModel: FamilyMemberViewModel
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val reminders by reminderViewModel.reminders.collectAsState()
-    
-    // Ticker to update "time left" every minute
+    val familyMembers by familyMemberViewModel.familyMembers.collectAsState()
+
+    val profiles = remember(familyMembers) {
+        listOf("Main Profile") + familyMembers.map { member ->
+            "${member.firstName} ${member.lastName}".trim().ifBlank { "Unnamed Profile" }
+        }
+    }
+
     var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
     LaunchedEffect(Unit) {
         while (true) {
             delay(60000)
@@ -109,7 +111,10 @@ fun RemindersScreen(
         }
     }
 
-    val activeReminders = reminders.filter { it.status != STATUS_COMPLETED }
+    val activeReminders = reminders
+        .filter { it.status != STATUS_COMPLETED }
+        .sortedBy { it.nextTriggerAtMillis }
+
     val nextReminder = activeReminders.firstOrNull()
 
     Scaffold(
@@ -167,7 +172,10 @@ fun RemindersScreen(
             }
 
             item {
-                NextReminderCard(reminder = nextReminder, currentTime = currentTime)
+                NextReminderCard(
+                    reminder = nextReminder,
+                    currentTime = currentTime
+                )
             }
 
             item {
@@ -213,6 +221,7 @@ fun RemindersScreen(
     if (showDialog.value) {
         AddEditReminderDialog(
             existingReminder = editingReminder.value,
+            profiles = profiles,
             onDismiss = {
                 showDialog.value = false
             },
@@ -301,7 +310,18 @@ private fun ReminderHeader(count: Int) {
 }
 
 @Composable
-private fun NextReminderCard(reminder: ReminderEntity?, currentTime: Long) {
+private fun NextReminderCard(
+    reminder: ReminderEntity?,
+    currentTime: Long
+) {
+    val hasReminder = reminder != null
+
+    val isOverdue = reminder?.let {
+        it.nextTriggerAtMillis > 0L &&
+                it.nextTriggerAtMillis < currentTime &&
+                it.status != STATUS_COMPLETED
+    } ?: false
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -346,17 +366,26 @@ private fun NextReminderCard(reminder: ReminderEntity?, currentTime: Long) {
                     overflow = TextOverflow.Ellipsis
                 )
 
-                val timeStatus = reminder?.let { formatTimeStatus(it.nextTriggerAtMillis, currentTime) }
-                
+                val timeStatus = reminder?.let {
+                    formatTimeStatus(it.nextTriggerAtMillis, currentTime)
+                }
+
                 Text(
                     text = reminder?.let {
+                        val profileName = it.profile.ifBlank { "Main Profile" }
+
                         val details = if (it.scheduleType == SCHEDULE_INTERVAL) {
-                            "Every ${it.intervalHours} hour(s) • ${it.profile}"
+                            "Every ${it.intervalHours} hour(s) • $profileName"
                         } else {
-                            "${it.date}, ${it.time} • ${it.profile}"
+                            "${it.date}, ${it.time} • $profileName"
                         }
-                        if (timeStatus != null) "$timeStatus\n$details" else details
-                    } ?: "Add your first reminder",
+
+                        if (!timeStatus.isNullOrBlank()) {
+                            "$timeStatus\n$details"
+                        } else {
+                            details
+                        }
+                    } ?: "Tap + to add your first reminder.",
                     style = MaterialTheme.typography.bodySmall,
                     color = if (timeStatus?.startsWith("Overdue") == true) ErrorRed else SoftText,
                     lineHeight = 16.sp
@@ -364,15 +393,19 @@ private fun NextReminderCard(reminder: ReminderEntity?, currentTime: Long) {
             }
 
             Surface(
-                color = if ((reminder?.nextTriggerAtMillis ?: 0) < currentTime && reminder?.status != STATUS_COMPLETED) 
-                    ErrorRed.copy(alpha = 0.1f) else Color.White,
+                color = if (isOverdue) ErrorRed.copy(alpha = 0.1f) else Color.White,
                 shape = RoundedCornerShape(50.dp)
             ) {
                 Text(
-                    text = if ((reminder?.nextTriggerAtMillis ?: 0) < currentTime && reminder?.status != STATUS_COMPLETED) 
-                        "Overdue" else reminder?.status ?: "Empty",
-                    color = if ((reminder?.nextTriggerAtMillis ?: 0) < currentTime && reminder?.status != STATUS_COMPLETED)
-                        ErrorRed else MedGreen,
+                    text = when {
+                        !hasReminder -> "Empty"
+                        isOverdue -> "Overdue"
+                        else -> reminder?.status ?: "Empty"
+                    },
+                    color = when {
+                        isOverdue -> ErrorRed
+                        else -> MedGreen
+                    },
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
@@ -392,14 +425,20 @@ private fun ReminderCard(
     onRestore: () -> Unit
 ) {
     val menuExpanded = remember { mutableStateOf(false) }
-    val isOverdue = reminder.nextTriggerAtMillis < currentTime && reminder.status != STATUS_COMPLETED
+
+    val isOverdue = reminder.nextTriggerAtMillis > 0L &&
+            reminder.nextTriggerAtMillis < currentTime &&
+            reminder.status != STATUS_COMPLETED
+
     val isCompletedForNow = ReminderUtils.isCompletedForCurrentCycle(reminder)
+
     val displayStatus = when {
         reminder.status == STATUS_COMPLETED -> STATUS_COMPLETED
         isCompletedForNow -> "Done for now"
         isOverdue -> "Overdue"
         else -> reminder.status
     }
+
     val timeStatus = formatTimeStatus(reminder.nextTriggerAtMillis, currentTime)
 
     Card(
@@ -407,7 +446,14 @@ private fun ReminderCard(
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, if (isOverdue && !isCompletedForNow) ErrorRed.copy(alpha = 0.5f) else SoftBorder)
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = if (isOverdue && !isCompletedForNow) {
+                ErrorRed.copy(alpha = 0.5f)
+            } else {
+                SoftBorder
+            }
+        )
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -419,7 +465,7 @@ private fun ReminderCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = reminder.title,
+                    text = reminder.title.ifBlank { "Untitled Reminder" },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = if (isOverdue && !isCompletedForNow) ErrorRed else DarkText,
@@ -444,7 +490,7 @@ private fun ReminderCard(
                     InfoLine(Icons.Filled.AccessTime, reminder.time)
                 }
 
-                InfoLine(Icons.Filled.Person, reminder.profile)
+                InfoLine(Icons.Filled.Person, reminder.profile.ifBlank { "Main Profile" })
 
                 if (reminder.note.isNotBlank()) {
                     Spacer(modifier = Modifier.height(5.dp))
@@ -621,6 +667,7 @@ private fun ReminderIcon(status: String) {
         "Due soon" -> Purple
         "Upcoming" -> Orange
         STATUS_COMPLETED, "Done for now" -> MedGreen
+        "Overdue" -> ErrorRed
         else -> MedGreen
     }
 
@@ -698,6 +745,7 @@ private fun StatusChip(status: String) {
 @Composable
 private fun AddEditReminderDialog(
     existingReminder: ReminderEntity?,
+    profiles: List<String>,
     onDismiss: () -> Unit,
     onSave: (ReminderEntity) -> Unit
 ) {
@@ -713,8 +761,14 @@ private fun AddEditReminderDialog(
         mutableStateOf(existingReminder?.time ?: "")
     }
 
-    val profile = remember(existingReminder?.id) {
-        mutableStateOf(existingReminder?.profile ?: "Main profile")
+    val profile = remember(existingReminder?.id, profiles) {
+        mutableStateOf(
+            if (existingReminder?.profile in profiles) {
+                existingReminder?.profile ?: "Main Profile"
+            } else {
+                "Main Profile"
+            }
+        )
     }
 
     val note = remember(existingReminder?.id) {
@@ -747,22 +801,27 @@ private fun AddEditReminderDialog(
     val repeatExpanded = remember { mutableStateOf(false) }
     val scheduleExpanded = remember { mutableStateOf(false) }
 
-    val profiles = listOf("Main profile", "Family member")
     val repeatOptions = listOf("Once", "Daily", "Weekly", "Monthly")
     val scheduleOptions = listOf(SCHEDULE_DATE_TIME, SCHEDULE_INTERVAL)
 
     val datePickerState = rememberDatePickerState()
-    
-    // Parse existing time for the picker
+
     val initialTime = remember(existingReminder?.id) {
         if (existingReminder != null) {
             try {
                 val sdf = SimpleDateFormat("h:mm a", Locale.getDefault())
                 val date = sdf.parse(existingReminder.time)
                 val calendar = java.util.Calendar.getInstance()
-                if (date != null) calendar.time = date
-                Pair(calendar.get(java.util.Calendar.HOUR_OF_DAY), calendar.get(java.util.Calendar.MINUTE))
-            } catch (e: Exception) {
+
+                if (date != null) {
+                    calendar.time = date
+                }
+
+                Pair(
+                    calendar.get(java.util.Calendar.HOUR_OF_DAY),
+                    calendar.get(java.util.Calendar.MINUTE)
+                )
+            } catch (_: Exception) {
                 Pair(8, 0)
             }
         } else {
@@ -989,7 +1048,7 @@ private fun AddEditReminderDialog(
                         value = profile.value,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Profile") },
+                        label = { Text("Profile / Owner") },
                         leadingIcon = {
                             Icon(Icons.Filled.Person, contentDescription = null)
                         },
@@ -1051,6 +1110,7 @@ private fun AddEditReminderDialog(
             Button(
                 onClick = {
                     val interval = intervalHours.value.toIntOrNull() ?: 0
+
                     val nextTrigger = ReminderUtils.calculateNextTriggerMillis(
                         selectedDate.value,
                         selectedTime.value,
@@ -1070,6 +1130,10 @@ private fun AddEditReminderDialog(
 
                         selectedTime.value.isBlank() -> {
                             error.value = "Please select a time."
+                        }
+
+                        profile.value.isBlank() -> {
+                            error.value = "Please select a profile."
                         }
 
                         scheduleType.value == SCHEDULE_INTERVAL && interval <= 0 -> {
@@ -1213,9 +1277,12 @@ private fun formatTime(hour: Int, minute: Int): String {
     return "$displayHour:${minute.toString().padStart(2, '0')} $amPm"
 }
 
-private fun formatTimeStatus(triggerMillis: Long, currentMillis: Long): String {
+private fun formatTimeStatus(
+    triggerMillis: Long,
+    currentMillis: Long
+): String {
     if (triggerMillis <= 0) return ""
-    
+
     val diff = triggerMillis - currentMillis
     val absDiff = kotlin.math.abs(diff)
     val minutes = (absDiff / 60000) % 60
@@ -1235,6 +1302,7 @@ private fun formatTimeStatus(triggerMillis: Long, currentMillis: Long): String {
             hours > 0 -> "$hours h $minutes m"
             else -> "$minutes m"
         }
+
         "Overdue by $overdueStr"
     } else {
         timeStr
