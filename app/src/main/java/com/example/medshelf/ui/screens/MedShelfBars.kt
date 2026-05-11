@@ -12,7 +12,6 @@ import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.NoteAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,7 +43,18 @@ fun MedShelfTopBar(
         },
         navigationIcon = {
             if (showBackButton) {
-                IconButton(onClick = { navController.popBackStack() }) {
+                IconButton(
+                    onClick = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate("dashboard") {
+                                launchSingleTop = true
+                                popUpTo("dashboard") {
+                                    inclusive = false
+                                }
+                            }
+                        }
+                    }
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back"
@@ -74,79 +84,94 @@ fun MedShelfBottomBar(navController: NavController) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             BottomNavItem(
                 label = "Home",
                 icon = Icons.Outlined.Home,
-                selected = currentRoute == "dashboard"
-            ) {
-                navController.navigate("dashboard") {
-                    launchSingleTop = true
-                    popUpTo("dashboard") { inclusive = false }
+                selected = currentRoute == "dashboard",
+                onClick = {
+                    navigateBottom(
+                        navController = navController,
+                        route = "dashboard",
+                        currentRoute = currentRoute
+                    )
                 }
-            }
+            )
 
             BottomNavItem(
                 label = "Documents",
                 icon = Icons.Outlined.Folder,
-                selected = currentRoute == "document_library"
-            ) {
-                navController.navigate("document_library") {
-                    launchSingleTop = true
+                selected = currentRoute == "document_library",
+                onClick = {
+                    navigateBottom(
+                        navController = navController,
+                        route = "document_library",
+                        currentRoute = currentRoute
+                    )
                 }
-            }
+            )
 
-            Box(
-                modifier = Modifier
-                    .size(58.dp)
-                    .background(MedGreen, CircleShape)
-                    .clickable {
-                        navController.navigate("add_document") {
-                            launchSingleTop = true
-                        }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = "Add Document",
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
+            CenterAddButton(
+                onClick = {
+                    navigateBottom(
+                        navController = navController,
+                        route = "add_document",
+                        currentRoute = currentRoute
+                    )
+                }
+            )
 
             BottomNavItem(
                 label = "Reminders",
                 icon = Icons.Outlined.Notifications,
-                selected = currentRoute == "reminders"
-            ) {
-                navController.navigate("reminders") {
-                    launchSingleTop = true
+                selected = currentRoute == "reminders",
+                onClick = {
+                    navigateBottom(
+                        navController = navController,
+                        route = "reminders",
+                        currentRoute = currentRoute
+                    )
                 }
-            }
-
-            BottomNavItem(
-                label = "Notes",
-                icon = Icons.Outlined.NoteAlt,
-                selected = currentRoute == "notes"
-            ) {
-                navController.navigate("notes") {
-                    launchSingleTop = true
-                }
-            }
+            )
 
             BottomNavItem(
                 label = "Profile",
                 icon = Icons.Outlined.AccountCircle,
-                selected = currentRoute == "edit_profile"
-            ) {
-                navController.navigate("edit_profile") {
-                    launchSingleTop = true
+                selected = currentRoute == "edit_profile",
+                onClick = {
+                    navigateBottom(
+                        navController = navController,
+                        route = "edit_profile",
+                        currentRoute = currentRoute
+                    )
                 }
-            }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CenterAddButton(
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .size(60.dp)
+            .clickable { onClick() },
+        shape = CircleShape,
+        color = MedGreen,
+        shadowElevation = 8.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = "Add Document",
+                tint = Color.White,
+                modifier = Modifier.size(32.dp)
+            )
         }
     }
 }
@@ -160,7 +185,7 @@ private fun BottomNavItem(
 ) {
     Column(
         modifier = Modifier
-            .width(58.dp)
+            .width(68.dp)
             .clickable { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -190,5 +215,22 @@ private fun BottomNavItem(
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             maxLines = 1
         )
+    }
+}
+
+private fun navigateBottom(
+    navController: NavController,
+    route: String,
+    currentRoute: String?
+) {
+    if (currentRoute == route) return
+
+    navController.navigate(route) {
+        launchSingleTop = true
+        restoreState = true
+
+        popUpTo("dashboard") {
+            saveState = true
+        }
     }
 }
