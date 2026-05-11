@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.medshelf.model.DocumentEntity
+import com.example.medshelf.model.FamilyMemberEntity
 import com.example.medshelf.model.NoteEntity
 import com.example.medshelf.model.ReminderEntity
 import com.example.medshelf.model.UserEntity
@@ -14,9 +15,10 @@ import com.example.medshelf.model.UserEntity
         UserEntity::class,
         DocumentEntity::class,
         NoteEntity::class,
-        ReminderEntity::class
+        ReminderEntity::class,
+        FamilyMemberEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -28,6 +30,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
 
     abstract fun reminderDao(): ReminderDao
+
+    abstract fun familyMemberDao(): FamilyMemberDao
 
     companion object {
 

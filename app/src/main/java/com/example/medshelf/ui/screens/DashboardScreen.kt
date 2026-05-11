@@ -16,6 +16,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -46,6 +50,15 @@ private val Orange = Color(0xFFF59E0B)
 private val ErrorRed = Color(0xFFEF4444)
 
 private const val STATUS_COMPLETED = "Completed"
+
+private data class FamilyProfile(
+    val name: String,
+    val relationship: String,
+    val bloodType: String,
+    val allergies: String,
+    val conditions: String,
+    val emergencyContact: String
+)
 
 @Composable
 fun DashboardScreen(
@@ -100,13 +113,11 @@ fun DashboardScreen(
                 contentPadding = PaddingValues(top = 18.dp, bottom = 110.dp)
             ) {
                 item {
-                    DashboardHeader(navController)
+                    DashboardHeader(
+                        navController = navController,
+                        firstName = firstName
+                    )
                 }
-
-                item {
-                    GreetingSection(firstName)
-                }
-
 
                 item {
                     EmergencySnapshotBanner {
@@ -129,8 +140,9 @@ fun DashboardScreen(
                             title = "Documents",
                             subtitle = "${documents.size} saved",
                             icon = Icons.Outlined.Folder,
-                            bgColor = Color(0xFFE6F7F4),
+                            bgColor = Color(0xFFF2FFFC),
                             iconColor = MedGreen,
+                            borderColor = MedGreen.copy(alpha = 0.22f),
                             modifier = Modifier.weight(1f)
                         ) {
                             navController.navigate("document_library")
@@ -142,6 +154,7 @@ fun DashboardScreen(
                             icon = Icons.Filled.Add,
                             bgColor = Color(0xFFE9FBEF),
                             iconColor = Color(0xFF16A34A),
+                            borderColor = Color(0xFF16A34A).copy(alpha = 0.18f),
                             modifier = Modifier.weight(1f)
                         ) {
                             navController.navigate("add_document")
@@ -155,8 +168,9 @@ fun DashboardScreen(
                             title = "Reminders",
                             subtitle = "${upcomingReminders.size} upcoming",
                             icon = Icons.Outlined.Notifications,
-                            bgColor = Color(0xFFF0EAFE),
+                            bgColor = Color(0xFFFBF8FF),
                             iconColor = Purple,
+                            borderColor = Purple.copy(alpha = 0.22f),
                             modifier = Modifier.weight(1f)
                         ) {
                             navController.navigate("reminders")
@@ -166,8 +180,9 @@ fun DashboardScreen(
                             title = "Health Notes",
                             subtitle = "Medical notes",
                             icon = Icons.Outlined.EditNote,
-                            bgColor = Color(0xFFFFF4D8),
+                            bgColor = Color(0xFFFFF8E8),
                             iconColor = Orange,
+                            borderColor = Orange.copy(alpha = 0.18f),
                             modifier = Modifier.weight(1f)
                         ) {
                             navController.navigate("notes")
@@ -214,80 +229,188 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun DashboardHeader(navController: NavController) {
+private fun DashboardHeader(
+    navController: NavController,
+    firstName: String
+) {
+    val greeting = when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
+        in 0..11 -> "Good morning"
+        in 12..17 -> "Good afternoon"
+        else -> "Good evening"
+    }
+
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = Color.White.copy(alpha = 0.92f),
-        tonalElevation = 0.dp,
-        shadowElevation = 3.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE6F2EF))
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding(),
+        shape = RoundedCornerShape(24.dp),
+        color = Color.White,
+        shadowElevation = 2.dp,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            Color(0xFFE7F2EF)
+        )
     ) {
-        Row(
+
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(Color(0xFFE6F7F4), RoundedCornerShape(18.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_medshelf_logo),
-                    contentDescription = "MedShelf Logo",
-                    modifier = Modifier.size(30.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Med",
-                        color = MedGreen,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White,
+                            Color(0xFFF8FFFC)
+                        )
                     )
+                )
+                .padding(horizontal = 18.dp, vertical = 16.dp)
+        ) {
 
-                    Text(
-                        text = "Shelf",
-                        color = DarkText,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold
+            // TOP BAR
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                // LOGO
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .background(
+                            Color(0xFFEAFBF7),
+                            RoundedCornerShape(16.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_medshelf_logo),
+                        contentDescription = null,
+                        modifier = Modifier.size(30.dp)
                     )
                 }
 
-                Text(
-                    text = "Personal medical library",
-                    color = SoftText,
-                    style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Med",
+                            color = MedGreen,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+
+                        Text(
+                            text = "Shelf",
+                            color = DarkText,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+
+                    Text(
+                        text = "Personal medical library",
+                        color = SoftText,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                HeaderIconButton(
+                    icon = Icons.Outlined.Notifications,
+                    iconColor = SoftText,
+                    backgroundColor = Color(0xFFF8FAFC),
+                    borderColor = SoftBorder
+                ) {
+                    navController.navigate("reminders")
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                HeaderIconButton(
+                    icon = Icons.Outlined.AccountCircle,
+                    iconColor = MedGreen,
+                    backgroundColor = Color(0xFFEAFBF7),
+                    borderColor = Color(0xFFD8F3EC)
+                ) {
+                    navController.navigate("edit_profile")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // GREETING PANEL
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFFF8FFFC),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    Color(0xFFE7F2EF)
                 )
-            }
-
-            HeaderIconButton(
-                icon = Icons.Outlined.Notifications,
-                iconColor = SoftText,
-                backgroundColor = Color(0xFFF8FAFC),
-                borderColor = SoftBorder
             ) {
-                navController.navigate("reminders")
-            }
 
-            Spacer(modifier = Modifier.width(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = 16.dp,
+                            vertical = 15.dp
+                        ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
 
-            HeaderIconButton(
-                icon = Icons.Outlined.AccountCircle,
-                iconColor = MedGreen,
-                backgroundColor = Color(0xFFE6F7F4),
-                borderColor = Color(0xFFCFF1EA)
-            ) {
-                navController.navigate("edit_profile")
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+
+                        Text(
+                            text = "$greeting,",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = SoftText
+                        )
+
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        Text(
+                            text = firstName,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = DarkText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = "Here's your health overview for today.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SoftText
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(62.dp)
+                            .background(
+                                Color(0xFFEAFBF7),
+                                RoundedCornerShape(18.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.HealthAndSafety,
+                            contentDescription = null,
+                            tint = MedGreen,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -318,31 +441,6 @@ private fun HeaderIconButton(
     }
 }
 
-@Composable
-private fun GreetingSection(firstName: String) {
-    val greeting = when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
-        in 0..11 -> "Good morning"
-        in 12..17 -> "Good afternoon"
-        else -> "Good evening"
-    }
-
-    Text(
-        text = "$greeting, $firstName",
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.ExtraBold,
-        color = DarkText,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis
-    )
-
-    Spacer(modifier = Modifier.height(3.dp))
-
-    Text(
-        text = "Here’s your latest health overview from saved records.",
-        style = MaterialTheme.typography.bodyMedium,
-        color = SoftText
-    )
-}
 @Composable
 private fun EmergencySnapshotBanner(onClick: () -> Unit) {
     Card(
@@ -421,6 +519,7 @@ private fun QuickActionCard(
     icon: ImageVector,
     bgColor: Color,
     iconColor: Color,
+    borderColor: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -429,9 +528,9 @@ private fun QuickActionCard(
             .height(118.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
+        colors = CardDefaults.cardColors(containerColor = bgColor),
+        elevation = CardDefaults.cardElevation(0.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
     ) {
         Column(
             modifier = Modifier
@@ -442,15 +541,15 @@ private fun QuickActionCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(38.dp)
-                    .background(bgColor, RoundedCornerShape(14.dp)),
+                    .size(42.dp)
+                    .background(Color.White.copy(alpha = 0.75f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = iconColor,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(23.dp)
                 )
             }
 
@@ -476,11 +575,37 @@ private fun QuickActionCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfilesCard(
     userName: String,
     bloodType: String
 ) {
+    val familyProfiles = remember {
+        mutableStateListOf(
+            FamilyProfile(
+                name = "Maria Santos",
+                relationship = "Mother",
+                bloodType = "O+",
+                allergies = "Penicillin",
+                conditions = "Hypertension",
+                emergencyContact = "0912 345 6789"
+            )
+        )
+    }
+
+    var showAddForm by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf("") }
+    var relationship by remember { mutableStateOf("") }
+    var selectedBloodType by remember { mutableStateOf("Not set") }
+    var allergies by remember { mutableStateOf("") }
+    var conditions by remember { mutableStateOf("") }
+    var emergencyContact by remember { mutableStateOf("") }
+    var showError by remember { mutableStateOf(false) }
+    var bloodTypeExpanded by remember { mutableStateOf(false) }
+
+    val bloodTypes = listOf("Not set", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-")
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
@@ -489,7 +614,52 @@ private fun ProfilesCard(
         border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            SectionTitle(title = "Profiles", onClick = {})
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Family Member Profiles",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = DarkText
+                    )
+
+                    Text(
+                        text = "Manage medical details for family members",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SoftText
+                    )
+                }
+
+                Surface(
+                    modifier = Modifier.clickable {
+                        showAddForm = !showAddForm
+                        showError = false
+                    },
+                    color = Color(0xFFEAFBF7),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (showAddForm) Icons.Default.Close else Icons.Default.Add,
+                            contentDescription = null,
+                            tint = MedGreen,
+                            modifier = Modifier.size(18.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        Text(
+                            text = if (showAddForm) "Close" else "Add",
+                            color = MedGreen,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -498,6 +668,351 @@ private fun ProfilesCard(
                 info = "Main profile • $bloodType",
                 selected = true,
                 isYou = true
+            )
+
+            if (familyProfiles.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+
+                familyProfiles.forEach { profile ->
+                    FamilyProfileItem(
+                        profile = profile,
+                        onDelete = {
+                            familyProfiles.remove(profile)
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+            }
+
+            if (showAddForm) {
+                Spacer(modifier = Modifier.height(4.dp))
+
+                HorizontalDivider(color = SoftBorder)
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Add New Family Member",
+                    fontWeight = FontWeight.Bold,
+                    color = DarkText,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                MedInputField(
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        showError = false
+                    },
+                    label = "Full Name",
+                    icon = Icons.Outlined.Person
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                MedInputField(
+                    value = relationship,
+                    onValueChange = {
+                        relationship = it
+                        showError = false
+                    },
+                    label = "Relationship",
+                    icon = Icons.Outlined.Groups
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                ExposedDropdownMenuBox(
+                    expanded = bloodTypeExpanded,
+                    onExpandedChange = { bloodTypeExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = selectedBloodType,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Blood Type") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Bloodtype,
+                                contentDescription = null,
+                                tint = MedGreen
+                            )
+                        },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = bloodTypeExpanded)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(
+                                type = MenuAnchorType.PrimaryNotEditable,
+                                enabled = true
+                            ),
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MedGreen,
+                            unfocusedBorderColor = SoftBorder,
+                            focusedLabelColor = MedGreen,
+                            cursorColor = MedGreen
+                        )
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = bloodTypeExpanded,
+                        onDismissRequest = { bloodTypeExpanded = false }
+                    ) {
+                        bloodTypes.forEach { type ->
+                            DropdownMenuItem(
+                                text = { Text(type) },
+                                onClick = {
+                                    selectedBloodType = type
+                                    bloodTypeExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                MedInputField(
+                    value = allergies,
+                    onValueChange = { allergies = it },
+                    label = "Allergies",
+                    icon = Icons.Outlined.Warning
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                MedInputField(
+                    value = conditions,
+                    onValueChange = { conditions = it },
+                    label = "Medical Conditions",
+                    icon = Icons.Outlined.MonitorHeart
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                MedInputField(
+                    value = emergencyContact,
+                    onValueChange = { emergencyContact = it },
+                    label = "Emergency Contact",
+                    icon = Icons.Outlined.Call
+                )
+
+                if (showError) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Full name and relationship are required.",
+                        color = ErrorRed,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        if (name.isBlank() || relationship.isBlank()) {
+                            showError = true
+                        } else {
+                            familyProfiles.add(
+                                FamilyProfile(
+                                    name = name.trim(),
+                                    relationship = relationship.trim(),
+                                    bloodType = selectedBloodType,
+                                    allergies = allergies.ifBlank { "Not set" },
+                                    conditions = conditions.ifBlank { "Not set" },
+                                    emergencyContact = emergencyContact.ifBlank { "Not set" }
+                                )
+                            )
+
+                            name = ""
+                            relationship = ""
+                            selectedBloodType = "Not set"
+                            allergies = ""
+                            conditions = ""
+                            emergencyContact = ""
+                            showError = false
+                            showAddForm = false
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MedGreen)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "Save Family Profile",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MedInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    icon: ImageVector
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        leadingIcon = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MedGreen
+            )
+        },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        shape = RoundedCornerShape(16.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MedGreen,
+            unfocusedBorderColor = SoftBorder,
+            focusedLabelColor = MedGreen,
+            cursorColor = MedGreen
+        )
+    )
+}
+
+@Composable
+private fun FamilyProfileItem(
+    profile: FamilyProfile,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFBFEFD)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .background(Color(0xFFE6F7F4), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        tint = MedGreen
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = profile.name,
+                        fontWeight = FontWeight.Bold,
+                        color = DarkText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Text(
+                        text = "${profile.relationship} • ${profile.bloodType}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SoftText
+                    )
+                }
+
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = "Delete profile",
+                        tint = ErrorRed
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            FamilyInfoRow(
+                icon = Icons.Outlined.Warning,
+                label = "Allergies",
+                value = profile.allergies,
+                color = Orange
+            )
+
+            FamilyInfoRow(
+                icon = Icons.Outlined.MonitorHeart,
+                label = "Conditions",
+                value = profile.conditions,
+                color = Purple
+            )
+
+            FamilyInfoRow(
+                icon = Icons.Outlined.Call,
+                label = "Emergency Contact",
+                value = profile.emergencyContact,
+                color = MedGreen
+            )
+        }
+    }
+}
+
+@Composable
+private fun FamilyInfoRow(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    color: Color
+) {
+    Row(
+        modifier = Modifier.padding(top = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(color.copy(alpha = 0.12f), RoundedCornerShape(11.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(9.dp))
+
+        Column {
+            Text(
+                text = label,
+                color = SoftText,
+                style = MaterialTheme.typography.labelSmall
+            )
+
+            Text(
+                text = value,
+                color = DarkText,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium
             )
         }
     }
@@ -769,7 +1284,6 @@ private fun RecentDocumentsCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             SectionTitle(
-                title = "Recent Documents",
                 onClick = { navController.navigate("document_library") }
             )
 
@@ -910,12 +1424,11 @@ private fun DashboardGraphic() {
 
 @Composable
 private fun SectionTitle(
-    title: String,
     onClick: () -> Unit
-) {
+){
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = title,
+            text = "Recent Documents",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = DarkText
