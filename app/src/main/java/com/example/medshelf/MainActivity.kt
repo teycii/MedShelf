@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -18,9 +19,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.medshelf.data.AppDatabase
-import androidx.compose.ui.platform.LocalContext
 import com.example.medshelf.emergency.EmergencyNotificationHelper
-import com.example.medshelf.ui.screens.EmergencySnapshotScreen
 import com.example.medshelf.ui.screens.*
 import com.example.medshelf.ui.theme.MedShelfTheme
 import com.example.medshelf.viewmodel.DocumentViewModel
@@ -63,6 +62,7 @@ fun MedShelfApp(database: AppDatabase) {
     )
 
     val context = LocalContext.current
+
     LaunchedEffect(Unit) {
         EmergencyNotificationHelper(context).showEmergencyNotification()
     }
@@ -200,6 +200,30 @@ fun MedShelfApp(database: AppDatabase) {
             AddFamilyMemberProfilesScreen(
                 navController = navController,
                 familyMemberViewModel = familyMemberViewModel
+            )
+        }
+
+        composable("family_member_details/{familyMemberId}") { backStackEntry ->
+            val familyMemberId = backStackEntry.arguments
+                ?.getString("familyMemberId")
+                ?.toIntOrNull() ?: 0
+
+            FamilyMemberDetailsScreen(
+                navController = navController,
+                familyMemberViewModel = familyMemberViewModel,
+                familyMemberId = familyMemberId
+            )
+        }
+
+        composable("edit_family_member/{familyMemberId}") { backStackEntry ->
+            val familyMemberId = backStackEntry.arguments
+                ?.getString("familyMemberId")
+                ?.toIntOrNull() ?: 0
+
+            EditFamilyMemberScreen(
+                navController = navController,
+                familyMemberViewModel = familyMemberViewModel,
+                familyMemberId = familyMemberId
             )
         }
 

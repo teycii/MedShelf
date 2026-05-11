@@ -623,7 +623,7 @@ private fun ProfilesCard(
                             val owner = "${member.firstName} ${member.lastName}".trim()
                                 .ifBlank { "Unnamed Profile" }
 
-                            navController.navigate("document_library/${Uri.encode(owner)}")
+                            navController.navigate("family_member_details/${member.id}")
                         }
                     )
 
