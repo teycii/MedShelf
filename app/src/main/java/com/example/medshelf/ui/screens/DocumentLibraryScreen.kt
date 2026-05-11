@@ -248,7 +248,7 @@ private fun SearchSection(
             .padding(horizontal = 20.dp)
             .padding(bottom = 14.dp),
         placeholder = {
-            Text("Search")
+            Text("Search documents...")
         },
         leadingIcon = {
             Icon(

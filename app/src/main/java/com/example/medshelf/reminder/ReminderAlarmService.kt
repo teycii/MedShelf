@@ -55,16 +55,17 @@ class ReminderAlarmService : Service() {
         createChannel()
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.medshelf_icon)
             .setContentTitle(title)
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setAutoCancel(false)
             .addAction(
-                R.drawable.ic_launcher_foreground,
+                R.drawable.medshelf_icon,
                 "Stop Alert",
                 createStopPendingIntent(reminderId)
             )
