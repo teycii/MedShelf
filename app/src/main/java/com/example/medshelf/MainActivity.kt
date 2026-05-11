@@ -178,6 +178,7 @@ fun MedShelfApp(database: AppDatabase) {
             EditDocumentScreen(
                 navController = navController,
                 documentViewModel = documentViewModel,
+                familyMemberViewModel = familyMemberViewModel,
                 documentId = documentId
             )
         }
