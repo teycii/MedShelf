@@ -54,6 +54,10 @@ fun SettingsScreen(
     var appLockMessage by remember { mutableStateOf("") }
     var isAppLockError by remember { mutableStateOf(false) }
 
+    var showChangeConfirmDialog by remember { mutableStateOf(false) }
+    var showRemoveConfirmDialog by remember { mutableStateOf(false) }
+    var showDisableConfirmDialog by remember { mutableStateOf(false) }
+
     val hasExistingPasscode = settingsManager.hasPasscode()
 
     Scaffold(
@@ -196,11 +200,15 @@ fun SettingsScreen(
                                 isAppLockError = true
                             }
 
+                            !enabled -> {
+                                showDisableConfirmDialog = true
+                            }
+
                             else -> {
-                                appLockEnabled = enabled
-                                settingsManager.setAppLockEnabled(enabled)
+                                appLockEnabled = true
+                                settingsManager.setAppLockEnabled(true)
                                 currentPasscode = ""
-                                appLockMessage = if (enabled) "App Lock enabled." else "App Lock disabled."
+                                appLockMessage = "App Lock enabled."
                                 isAppLockError = false
                             }
                         }
@@ -273,6 +281,10 @@ fun SettingsScreen(
                                 isAppLockError = true
                             }
 
+                            hasExistingPasscode -> {
+                                showChangeConfirmDialog = true
+                            }
+
                             else -> {
                                 settingsManager.savePasscode(newPasscode)
                                 settingsManager.setAppLockEnabled(true)
@@ -282,12 +294,7 @@ fun SettingsScreen(
                                 newPasscode = ""
                                 confirmPasscode = ""
 
-                                appLockMessage = if (hasExistingPasscode) {
-                                    "Passcode changed successfully."
-                                } else {
-                                    "Passcode created and App Lock enabled."
-                                }
-
+                                appLockMessage = "Passcode created and App Lock enabled."
                                 isAppLockError = false
                             }
                         }
@@ -330,13 +337,7 @@ fun SettingsScreen(
                             }
 
                             else -> {
-                                settingsManager.clearPasscode()
-                                appLockEnabled = false
-                                currentPasscode = ""
-                                newPasscode = ""
-                                confirmPasscode = ""
-                                appLockMessage = "Passcode removed and App Lock disabled."
-                                isAppLockError = false
+                                showRemoveConfirmDialog = true
                             }
                         }
                     },
@@ -359,6 +360,74 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+
+    if (showChangeConfirmDialog) {
+        ConfirmSecurityDialog(
+            title = "Change Passcode?",
+            message = "This will replace your current MedShelf app passcode. Continue?",
+            confirmText = "Change",
+            onDismiss = {
+                showChangeConfirmDialog = false
+            },
+            onConfirm = {
+                settingsManager.savePasscode(newPasscode)
+                settingsManager.setAppLockEnabled(true)
+
+                appLockEnabled = true
+                currentPasscode = ""
+                newPasscode = ""
+                confirmPasscode = ""
+
+                appLockMessage = "Passcode changed successfully."
+                isAppLockError = false
+                showChangeConfirmDialog = false
+            }
+        )
+    }
+
+    if (showRemoveConfirmDialog) {
+        ConfirmSecurityDialog(
+            title = "Remove Passcode?",
+            message = "This will remove your passcode and disable App Lock. Your medical records will open without a passcode.",
+            confirmText = "Remove",
+            onDismiss = {
+                showRemoveConfirmDialog = false
+            },
+            onConfirm = {
+                settingsManager.clearPasscode()
+
+                appLockEnabled = false
+                currentPasscode = ""
+                newPasscode = ""
+                confirmPasscode = ""
+
+                appLockMessage = "Passcode removed and App Lock disabled."
+                isAppLockError = false
+                showRemoveConfirmDialog = false
+            }
+        )
+    }
+
+    if (showDisableConfirmDialog) {
+        ConfirmSecurityDialog(
+            title = "Disable App Lock?",
+            message = "Your passcode will stay saved, but MedShelf will no longer ask for it when opening the app.",
+            confirmText = "Disable",
+            onDismiss = {
+                showDisableConfirmDialog = false
+            },
+            onConfirm = {
+                settingsManager.setAppLockEnabled(false)
+
+                appLockEnabled = false
+                currentPasscode = ""
+
+                appLockMessage = "App Lock disabled."
+                isAppLockError = false
+                showDisableConfirmDialog = false
+            }
+        )
     }
 }
 
@@ -445,6 +514,56 @@ private fun SecurePasscodeField(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
         singleLine = true,
         shape = RoundedCornerShape(18.dp)
+    )
+}
+
+@Composable
+private fun ConfirmSecurityDialog(
+    title: String,
+    message: String,
+    confirmText: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Filled.Security,
+                contentDescription = null,
+                tint = MedGreen
+            )
+        },
+        title = {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold,
+                color = DarkText
+            )
+        },
+        text = {
+            Text(
+                text = message,
+                color = SoftText
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MedGreen,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(confirmText)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = SoftText)
+            }
+        },
+        shape = RoundedCornerShape(24.dp)
     )
 }
 
