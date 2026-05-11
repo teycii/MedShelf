@@ -1,5 +1,6 @@
 package com.example.medshelf.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -7,9 +8,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
@@ -89,7 +94,7 @@ private fun BackButton(onClick: () -> Unit) {
         shape = RoundedCornerShape(14.dp),
         color = Color.White,
         shadowElevation = 1.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
+        border = BorderStroke(1.dp, SoftBorder)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
@@ -107,83 +112,83 @@ fun MedShelfBottomBar(navController: NavController) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
-    Surface(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 14.dp, vertical = 10.dp)
             .height(88.dp),
-        color = Color.White,
-        shadowElevation = 12.dp
+        contentAlignment = Alignment.BottomCenter
     ) {
-        Row(
+        Surface(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .fillMaxWidth()
+                .height(78.dp),
+            shape = RoundedCornerShape(28.dp),
+            color = Color.White,
+            shadowElevation = 10.dp,
+            border = BorderStroke(1.dp, SoftBorder.copy(alpha = 0.45f))
         ) {
-            BottomNavItem(
-                label = "Home",
-                icon = Icons.Outlined.Home,
-                selected = currentRoute == "dashboard",
-                enabled = currentRoute != "dashboard",
-                onClick = { navigateRoot(navController, "dashboard") }
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    BottomNavItem(
+                        label = "Home",
+                        icon = if (currentRoute == "dashboard") Icons.Filled.Home else Icons.Outlined.Home,
+                        selected = currentRoute == "dashboard",
+                        enabled = currentRoute != "dashboard",
+                        onClick = { navigateRoot(navController, "dashboard") }
+                    )
 
-            BottomNavItem(
-                label = "Documents",
-                icon = Icons.Outlined.Folder,
-                selected = isDocumentRoute(currentRoute),
-                enabled = currentRoute != "document_library",
-                onClick = { navigateRoot(navController, "document_library") }
-            )
+                    BottomNavItem(
+                        label = "Library",
+                        icon = if (isDocumentRoute(currentRoute)) Icons.Filled.Description else Icons.Outlined.Description,
+                        selected = isDocumentRoute(currentRoute),
+                        enabled = currentRoute != "document_library",
+                        onClick = { navigateRoot(navController, "document_library") }
+                    )
+                }
 
-            CenterAddButton(
-                selected = currentRoute == "add_document",
-                enabled = currentRoute != "add_document",
-                onClick = { navigateRoot(navController, "add_document") }
-            )
+                Spacer(modifier = Modifier.width(78.dp))
 
-            BottomNavItem(
-                label = "Reminders",
-                icon = Icons.Outlined.Notifications,
-                selected = currentRoute == "reminders",
-                enabled = currentRoute != "reminders",
-                onClick = { navigateRoot(navController, "reminders") }
-            )
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    BottomNavItem(
+                        label = "Reminders",
+                        icon = if (currentRoute == "reminders") Icons.Filled.Notifications else Icons.Outlined.Notifications,
+                        selected = currentRoute == "reminders",
+                        enabled = currentRoute != "reminders",
+                        onClick = { navigateRoot(navController, "reminders") }
+                    )
 
-            BottomNavItem(
-                label = "Profile",
-                icon = Icons.Outlined.AccountCircle,
-                selected = isProfileRoute(currentRoute),
-                enabled = currentRoute != "edit_profile",
-                onClick = { navigateRoot(navController, "edit_profile") }
-            )
+                    BottomNavItem(
+                        label = "Profile",
+                        icon = if (isProfileRoute(currentRoute)) Icons.Filled.AccountCircle else Icons.Outlined.AccountCircle,
+                        selected = isProfileRoute(currentRoute),
+                        enabled = currentRoute != "edit_profile",
+                        onClick = { navigateRoot(navController, "edit_profile") }
+                    )
+                }
+            }
         }
-    }
-}
 
-@Composable
-private fun CenterAddButton(
-    selected: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .size(if (selected) 62.dp else 58.dp)
-            .clickable(enabled = enabled) { onClick() },
-        shape = CircleShape,
-        color = MedGreen,
-        shadowElevation = if (selected) 9.dp else 6.dp
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = Icons.Filled.Add,
-                contentDescription = "Add Document",
-                tint = Color.White,
-                modifier = Modifier.size(31.dp)
-            )
-        }
+        CenterAddButton(
+            selected = currentRoute == "add_document",
+            enabled = currentRoute != "add_document",
+            onClick = { navigateRoot(navController, "add_document") },
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
     }
 }
 
@@ -197,29 +202,28 @@ private fun BottomNavItem(
 ) {
     Column(
         modifier = Modifier
-            .width(68.dp)
-            .clickable(enabled = enabled) { onClick() }
-            .padding(vertical = 4.dp),
+            .width(76.dp)
+            .clickable(enabled = enabled) { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .background(
-                    color = if (selected) MedGreen.copy(alpha = 0.12f) else Color.Transparent,
-                    shape = RoundedCornerShape(12.dp)
-                ),
-            contentAlignment = Alignment.Center
+        Surface(
+            shape = RoundedCornerShape(18.dp),
+            color = if (selected) MedGreen.copy(alpha = 0.14f) else Color.Transparent
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = if (selected) MedGreen else SoftText,
-                modifier = Modifier.size(22.dp)
-            )
+            Box(
+                modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = if (selected) MedGreen else SoftText,
+                    modifier = Modifier.size(if (selected) 25.dp else 22.dp)
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Text(
             text = label,
@@ -228,6 +232,32 @@ private fun BottomNavItem(
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             maxLines = 1
         )
+    }
+}
+
+@Composable
+private fun CenterAddButton(
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .size(66.dp)
+            .clickable(enabled = enabled) { onClick() },
+        shape = CircleShape,
+        color = MedGreen,
+        shadowElevation = 12.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = "Add Document",
+                tint = Color.White,
+                modifier = Modifier.size(34.dp)
+            )
+        }
     }
 }
 
@@ -281,16 +311,19 @@ private fun navigateBackFriendly(navController: NavController) {
         "edit_document/{documentId}" -> {
             navController.navigate("document_library") {
                 launchSingleTop = true
+
                 popUpTo("dashboard") {
                     inclusive = false
                     saveState = false
                 }
+
                 restoreState = false
             }
         }
 
         else -> {
             val didPop = navController.popBackStack()
+
             if (!didPop) {
                 navigateRoot(navController, "dashboard")
             }

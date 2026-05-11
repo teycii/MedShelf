@@ -1,11 +1,6 @@
 package com.example.medshelf.data
 
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.Update
+import androidx.room.*
 import com.example.medshelf.model.DocumentEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -50,6 +45,8 @@ interface DocumentDao {
             OR owner LIKE '%' || :query || '%'
             OR clinic LIKE '%' || :query || '%'
             OR notes LIKE '%' || :query || '%'
+            OR date LIKE '%' || :query || '%'
+            OR time LIKE '%' || :query || '%'
         ORDER BY createdAt DESC
     """)
     fun searchDocuments(

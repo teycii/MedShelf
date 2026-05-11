@@ -37,7 +37,6 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.medshelf.viewmodel.DocumentViewModel
 import com.example.medshelf.viewmodel.FamilyMemberViewModel
-import com.example.medshelf.viewmodel.UserViewModel
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -69,6 +68,7 @@ fun AddDocumentScreen(
     var docType by remember { mutableStateOf("") }
     var owner by remember { mutableStateOf("Main Profile") }
     var date by remember { mutableStateOf("") }
+    var time by remember { mutableStateOf("") }
     var clinic by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
@@ -78,8 +78,14 @@ fun AddDocumentScreen(
     var typeExpanded by remember { mutableStateOf(false) }
     var ownerExpanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
 
     val datePickerState = rememberDatePickerState()
+    val timePickerState = rememberTimePickerState(
+        initialHour = 8,
+        initialMinute = 0,
+        is24Hour = false
+    )
 
     LaunchedEffect(ownerChoices) {
         if (owner !in ownerChoices) {
@@ -244,7 +250,9 @@ fun AddDocumentScreen(
 
             ExposedDropdownMenuBox(
                 expanded = typeExpanded,
-                onExpandedChange = { typeExpanded = !typeExpanded }
+                onExpandedChange = {
+                    typeExpanded = !typeExpanded
+                }
             ) {
                 OutlinedTextField(
                     value = docType,
@@ -274,7 +282,9 @@ fun AddDocumentScreen(
 
                 ExposedDropdownMenu(
                     expanded = typeExpanded,
-                    onDismissRequest = { typeExpanded = false }
+                    onDismissRequest = {
+                        typeExpanded = false
+                    }
                 ) {
                     documentTypes.forEach { type ->
                         DropdownMenuItem(
@@ -291,7 +301,9 @@ fun AddDocumentScreen(
 
             ExposedDropdownMenuBox(
                 expanded = ownerExpanded,
-                onExpandedChange = { ownerExpanded = !ownerExpanded }
+                onExpandedChange = {
+                    ownerExpanded = !ownerExpanded
+                }
             ) {
                 OutlinedTextField(
                     value = owner,
@@ -321,7 +333,9 @@ fun AddDocumentScreen(
 
                 ExposedDropdownMenu(
                     expanded = ownerExpanded,
-                    onDismissRequest = { ownerExpanded = false }
+                    onDismissRequest = {
+                        ownerExpanded = false
+                    }
                 ) {
                     ownerChoices.forEach { item ->
                         DropdownMenuItem(
@@ -343,7 +357,7 @@ fun AddDocumentScreen(
                     .fillMaxWidth()
                     .clickable { showDatePicker = true },
                 label = { Text("Document Date (Optional)") },
-                placeholder = { Text("Leave blank to use today") },
+                placeholder = { Text("Leave blank to use current date") },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Filled.Event,
@@ -367,6 +381,47 @@ fun AddDocumentScreen(
                             Icon(
                                 imageVector = Icons.Filled.CalendarMonth,
                                 contentDescription = "Choose Date",
+                                tint = MedGreen
+                            )
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(16.dp),
+                colors = textFieldColors()
+            )
+
+            OutlinedTextField(
+                value = time,
+                onValueChange = {},
+                readOnly = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showTimePicker = true },
+                label = { Text("Document Time (Optional)") },
+                placeholder = { Text("Leave blank to use current time") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.AccessTime,
+                        contentDescription = null,
+                        tint = SoftText
+                    )
+                },
+                trailingIcon = {
+                    Row {
+                        if (time.isNotBlank()) {
+                            IconButton(onClick = { time = "" }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Clear Time",
+                                    tint = SoftText
+                                )
+                            }
+                        }
+
+                        IconButton(onClick = { showTimePicker = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.Schedule,
+                                contentDescription = "Choose Time",
                                 tint = MedGreen
                             )
                         }
@@ -431,7 +486,8 @@ fun AddDocumentScreen(
                                 name = title.trim(),
                                 type = docType.trim(),
                                 owner = owner.trim(),
-                                date = date.ifBlank { formatDocumentDate(System.currentTimeMillis()) },
+                                date = date.trim(),
+                                time = time.trim(),
                                 clinic = clinic.ifBlank { "Not specified" },
                                 notes = notes.ifBlank { "No notes" },
                                 fileUri = selectedFileUri.toString()
@@ -502,6 +558,52 @@ fun AddDocumentScreen(
         ) {
             DatePicker(state = datePickerState)
         }
+    }
+
+    if (showTimePicker) {
+        AlertDialog(
+            onDismissRequest = {
+                showTimePicker = false
+            },
+            title = {
+                Text(
+                    text = "Select Time",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    TimePicker(state = timePickerState)
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        time = formatDocumentTime(
+                            hour = timePickerState.hour,
+                            minute = timePickerState.minute
+                        )
+
+                        errorMessage = ""
+                        showTimePicker = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showTimePicker = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -741,6 +843,21 @@ private fun isImageFile(
 private fun formatDocumentDate(millis: Long): String {
     val formatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
     return formatter.format(Date(millis))
+}
+
+private fun formatDocumentTime(
+    hour: Int,
+    minute: Int
+): String {
+    val amPm = if (hour >= 12) "PM" else "AM"
+
+    val displayHour = when {
+        hour == 0 -> 12
+        hour > 12 -> hour - 12
+        else -> hour
+    }
+
+    return "$displayHour:${minute.toString().padStart(2, '0')} $amPm"
 }
 
 private fun categoryIcon(type: String): ImageVector {

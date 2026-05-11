@@ -18,7 +18,7 @@ import com.example.medshelf.model.UserEntity
         ReminderEntity::class,
         FamilyMemberEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

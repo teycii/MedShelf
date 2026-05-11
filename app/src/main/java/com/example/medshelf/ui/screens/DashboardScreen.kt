@@ -1,7 +1,6 @@
 package com.example.medshelf.ui.screens
 
 import android.net.Uri
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,12 +21,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.medshelf.R
 import com.example.medshelf.model.DocumentEntity
 import com.example.medshelf.model.FamilyMemberEntity
 import com.example.medshelf.model.ReminderEntity
@@ -264,31 +261,23 @@ private fun DashboardHeader(
                         .background(Color(0xFFEAFBF7), RoundedCornerShape(16.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_medshelf_logo),
-                        contentDescription = null,
-                        modifier = Modifier.size(30.dp)
+                    Icon(
+                        imageVector = Icons.Filled.MedicalServices,
+                        contentDescription = "MedShelf",
+                        tint = MedGreen,
+                        modifier = Modifier.size(29.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Med",
-                            color = MedGreen,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-
-                        Text(
-                            text = "Shelf",
-                            color = DarkText,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
+                    Text(
+                        text = "MedShelf",
+                        color = DarkText,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    )
 
                     Text(
                         text = "Personal medical library",
@@ -309,12 +298,12 @@ private fun DashboardHeader(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 HeaderIconButton(
-                    icon = Icons.Outlined.AccountCircle,
+                    icon = Icons.Outlined.Settings,
                     iconColor = MedGreen,
                     backgroundColor = Color(0xFFEAFBF7),
                     borderColor = Color(0xFFD8F3EC)
                 ) {
-                    navController.navigate("edit_profile")
+                    navController.navigate("settings")
                 }
             }
 
@@ -620,9 +609,6 @@ private fun ProfilesCard(
                         member = member,
                         colorSet = profileColorSet(index),
                         onClick = {
-                            val owner = "${member.firstName} ${member.lastName}".trim()
-                                .ifBlank { "Unnamed Profile" }
-
                             navController.navigate("family_member_details/${member.id}")
                         }
                     )
