@@ -72,6 +72,15 @@ fun EditDocumentScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White,
+                                Color(0xFFF9FFFC),
+                                Color(0xFFEFFFF8)
+                            )
+                        )
+                    )
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
@@ -101,11 +110,13 @@ fun EditDocumentScreen(
         mutableStateOf(
             when (document.owner.trim()) {
                 "Main profile" -> "Main Profile"
+                "Main Profile" -> "Main Profile"
                 else -> document.owner.ifBlank { "Main Profile" }
             }
         )
     }
     var date by remember(document.id) { mutableStateOf(document.date) }
+    var time by remember(document.id) { mutableStateOf(document.time) }
     var clinic by remember(document.id) { mutableStateOf(document.clinic) }
     var notes by remember(document.id) { mutableStateOf(document.notes) }
     var fileUri by remember(document.id) { mutableStateOf(document.fileUri) }
@@ -113,6 +124,15 @@ fun EditDocumentScreen(
 
     var typeExpanded by remember { mutableStateOf(false) }
     var ownerExpanded by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    val datePickerState = rememberDatePickerState()
+    val timePickerState = rememberTimePickerState(
+        initialHour = parseHourFromTime(time),
+        initialMinute = parseMinuteFromTime(time),
+        is24Hour = false
+    )
 
     LaunchedEffect(ownerChoices) {
         if (owner !in ownerChoices) {
@@ -189,11 +209,10 @@ fun EditDocumentScreen(
                 )
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 20.dp)
+                .padding(top = 18.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(12.dp))
-
             Text(
                 text = "Update Document Information",
                 style = MaterialTheme.typography.titleLarge,
@@ -237,8 +256,8 @@ fun EditDocumentScreen(
 
             ExposedDropdownMenuBox(
                 expanded = typeExpanded,
-                onExpandedChange = { isExpanded ->
-                    typeExpanded = isExpanded
+                onExpandedChange = {
+                    typeExpanded = !typeExpanded
                 }
             ) {
                 OutlinedTextField(
@@ -269,7 +288,9 @@ fun EditDocumentScreen(
 
                 ExposedDropdownMenu(
                     expanded = typeExpanded,
-                    onDismissRequest = { typeExpanded = false }
+                    onDismissRequest = {
+                        typeExpanded = false
+                    }
                 ) {
                     documentTypes.forEach { type ->
                         DropdownMenuItem(
@@ -286,8 +307,8 @@ fun EditDocumentScreen(
 
             ExposedDropdownMenuBox(
                 expanded = ownerExpanded,
-                onExpandedChange = { isExpanded ->
-                    ownerExpanded = isExpanded
+                onExpandedChange = {
+                    ownerExpanded = !ownerExpanded
                 }
             ) {
                 OutlinedTextField(
@@ -318,7 +339,9 @@ fun EditDocumentScreen(
 
                 ExposedDropdownMenu(
                     expanded = ownerExpanded,
-                    onDismissRequest = { ownerExpanded = false }
+                    onDismissRequest = {
+                        ownerExpanded = false
+                    }
                 ) {
                     ownerChoices.forEach { item ->
                         DropdownMenuItem(
@@ -333,15 +356,90 @@ fun EditDocumentScreen(
                 }
             }
 
-            EditDocumentInputField(
-                label = "Document Date (Optional)",
+            OutlinedTextField(
                 value = date,
-                icon = Icons.Filled.Event,
-                placeholder = "Leave blank to use today",
-                onValueChange = {
-                    date = it
-                    errorMessage = ""
-                }
+                onValueChange = {},
+                readOnly = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        showDatePicker = true
+                    },
+                label = { Text("Document Date (Optional)") },
+                placeholder = { Text("Leave blank to use current date") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Event,
+                        contentDescription = null,
+                        tint = SoftText
+                    )
+                },
+                trailingIcon = {
+                    Row {
+                        if (date.isNotBlank()) {
+                            IconButton(onClick = { date = "" }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Clear Date",
+                                    tint = SoftText
+                                )
+                            }
+                        }
+
+                        IconButton(onClick = { showDatePicker = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.CalendarMonth,
+                                contentDescription = "Choose Date",
+                                tint = MedGreen
+                            )
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(16.dp),
+                colors = editTextFieldColors()
+            )
+
+            OutlinedTextField(
+                value = time,
+                onValueChange = {},
+                readOnly = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        showTimePicker = true
+                    },
+                label = { Text("Document Time (Optional)") },
+                placeholder = { Text("Leave blank to use current time") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.AccessTime,
+                        contentDescription = null,
+                        tint = SoftText
+                    )
+                },
+                trailingIcon = {
+                    Row {
+                        if (time.isNotBlank()) {
+                            IconButton(onClick = { time = "" }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Clear Time",
+                                    tint = SoftText
+                                )
+                            }
+                        }
+
+                        IconButton(onClick = { showTimePicker = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.Schedule,
+                                contentDescription = "Choose Time",
+                                tint = MedGreen
+                            )
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(16.dp),
+                colors = editTextFieldColors()
             )
 
             EditDocumentInputField(
@@ -377,6 +475,8 @@ fun EditDocumentScreen(
 
             Button(
                 onClick = {
+                    val now = System.currentTimeMillis()
+
                     when {
                         title.isBlank() -> {
                             errorMessage = "Please enter the document title."
@@ -400,7 +500,10 @@ fun EditDocumentScreen(
                                 type = docType.trim(),
                                 owner = owner.trim(),
                                 date = date.ifBlank {
-                                    formatDocumentDate(System.currentTimeMillis())
+                                    formatDocumentDate(now)
+                                },
+                                time = time.ifBlank {
+                                    formatCurrentDocumentTime(now)
                                 },
                                 clinic = clinic.ifBlank { "Not specified" },
                                 notes = notes.ifBlank { "No notes" },
@@ -438,9 +541,86 @@ fun EditDocumentScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
-
-            Spacer(modifier = Modifier.height(30.dp))
         }
+    }
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = {
+                showDatePicker = false
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            date = formatDocumentDate(millis)
+                            errorMessage = ""
+                        }
+
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showTimePicker) {
+        AlertDialog(
+            onDismissRequest = {
+                showTimePicker = false
+            },
+            title = {
+                Text(
+                    text = "Select Time",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    TimePicker(state = timePickerState)
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        time = formatDocumentTime(
+                            hour = timePickerState.hour,
+                            minute = timePickerState.minute
+                        )
+
+                        errorMessage = ""
+                        showTimePicker = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showTimePicker = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -459,7 +639,9 @@ private fun EditFilePreviewBox(
         modifier = Modifier
             .fillMaxWidth()
             .height(170.dp)
-            .clickable { onChangeFile() },
+            .clickable {
+                onChangeFile()
+            },
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp),
@@ -610,9 +792,68 @@ private fun isImageFile(
     }
 }
 
-private fun formatDocumentDate(millis: Long): String {
-    val formatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+private fun formatDocumentDate(
+    millis: Long
+): String {
+    val formatter = SimpleDateFormat(
+        "MMM dd, yyyy",
+        Locale.getDefault()
+    )
+
     return formatter.format(Date(millis))
+}
+
+private fun formatCurrentDocumentTime(
+    millis: Long
+): String {
+    val formatter = SimpleDateFormat(
+        "hh:mm a",
+        Locale.getDefault()
+    )
+
+    return formatter.format(Date(millis))
+}
+
+private fun formatDocumentTime(
+    hour: Int,
+    minute: Int
+): String {
+    val amPm = if (hour >= 12) "PM" else "AM"
+
+    val displayHour = when {
+        hour == 0 -> 12
+        hour > 12 -> hour - 12
+        else -> hour
+    }
+
+    return "$displayHour:${minute.toString().padStart(2, '0')} $amPm"
+}
+
+private fun parseHourFromTime(time: String): Int {
+    return parseTimeParts(time).first
+}
+
+private fun parseMinuteFromTime(time: String): Int {
+    return parseTimeParts(time).second
+}
+
+private fun parseTimeParts(time: String): Pair<Int, Int> {
+    return try {
+        if (time.isBlank()) return Pair(8, 0)
+
+        val formatter = SimpleDateFormat("h:mm a", Locale.getDefault())
+        val parsedDate = formatter.parse(time) ?: return Pair(8, 0)
+
+        val calendar = java.util.Calendar.getInstance()
+        calendar.time = parsedDate
+
+        Pair(
+            calendar.get(java.util.Calendar.HOUR_OF_DAY),
+            calendar.get(java.util.Calendar.MINUTE)
+        )
+    } catch (_: Exception) {
+        Pair(8, 0)
+    }
 }
 
 private fun categoryIcon(type: String): ImageVector {

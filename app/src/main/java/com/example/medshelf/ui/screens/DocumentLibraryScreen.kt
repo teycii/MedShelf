@@ -92,6 +92,7 @@ fun DocumentLibraryScreen(
                     document.owner.contains(searchQuery, ignoreCase = true) ||
                     document.clinic.contains(searchQuery, ignoreCase = true) ||
                     document.date.contains(searchQuery, ignoreCase = true) ||
+                    document.time.contains(searchQuery, ignoreCase = true) ||
                     document.notes.contains(searchQuery, ignoreCase = true)
         }
 
@@ -108,11 +109,16 @@ fun DocumentLibraryScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate("add_document") },
+                onClick = {
+                    navController.navigate("add_document")
+                },
                 containerColor = MedGreen,
                 contentColor = Color.White
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Document")
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Document"
+                )
             }
         },
         containerColor = Color.Transparent
@@ -165,7 +171,9 @@ fun DocumentLibraryScreen(
                     selectedFilter = selectedFilter,
                     selectedOwner = selectedOwnerFilter,
                     searchQuery = searchQuery,
-                    onAddClick = { navController.navigate("add_document") }
+                    onAddClick = {
+                        navController.navigate("add_document")
+                    }
                 )
             } else {
                 LazyVerticalGrid(
@@ -188,6 +196,7 @@ fun DocumentLibraryScreen(
                             type = doc.type,
                             owner = doc.owner,
                             date = doc.date,
+                            time = doc.time,
                             fileUri = doc.fileUri,
                             onClick = {
                                 navController.navigate("document_details/${doc.id}")
@@ -213,7 +222,9 @@ fun DocumentLibraryScreen(
         documentToDelete?.let { document ->
             DeleteDocumentDialog(
                 document = document,
-                onDismiss = { documentToDelete = null },
+                onDismiss = {
+                    documentToDelete = null
+                },
                 onConfirmDelete = {
                     documentViewModel.deleteDocument(document)
                     documentToDelete = null
@@ -236,14 +247,24 @@ private fun SearchSection(
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .padding(bottom = 14.dp),
-        placeholder = { Text("Search documents, owner, clinic...") },
+        placeholder = {
+            Text("Search")
+        },
         leadingIcon = {
-            Icon(Icons.Default.Search, contentDescription = null, tint = SoftText)
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = SoftText
+            )
         },
         trailingIcon = {
             if (searchQuery.isNotBlank()) {
                 IconButton(onClick = onClearSearch) {
-                    Icon(Icons.Default.Close, contentDescription = "Clear Search", tint = SoftText)
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Clear Search",
+                        tint = SoftText
+                    )
                 }
             }
         },
@@ -285,12 +306,14 @@ private fun ProfileFilterSection(
                 val selected = selectedOwner == owner
 
                 Surface(
-                    modifier = Modifier.clickable { onOwnerSelected(owner) },
+                    modifier = Modifier.clickable {
+                        onOwnerSelected(owner)
+                    },
                     shape = RoundedCornerShape(50),
                     color = if (selected) MedGreen else Color.White,
                     border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (selected) MedGreen else SoftBorder
+                        width = 1.dp,
+                        color = if (selected) MedGreen else SoftBorder
                     ),
                     shadowElevation = if (selected) 2.dp else 0.dp
                 ) {
@@ -299,7 +322,11 @@ private fun ProfileFilterSection(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = if (owner == "All Profiles") Icons.Default.Groups else Icons.Default.Person,
+                            imageVector = if (owner == "All Profiles") {
+                                Icons.Default.Groups
+                            } else {
+                                Icons.Default.Person
+                            },
                             contentDescription = null,
                             tint = if (selected) Color.White else MedGreen,
                             modifier = Modifier.size(16.dp)
@@ -330,8 +357,15 @@ private fun DeleteDocumentDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete Document", fontWeight = FontWeight.Bold) },
-        text = { Text("Are you sure you want to delete \"${document.name}\"?") },
+        title = {
+            Text(
+                text = "Delete Document",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Text("Are you sure you want to delete \"${document.name}\"?")
+        },
         confirmButton = {
             Button(
                 onClick = onConfirmDelete,
@@ -411,7 +445,9 @@ private fun CategorySection(
                     icon = category.icon,
                     accentColor = category.color,
                     selected = selectedFilter == category.label,
-                    onClick = { onSelect(category.label) }
+                    onClick = {
+                        onSelect(category.label)
+                    }
                 )
             }
         }
@@ -453,13 +489,15 @@ private fun CategoryCapsule(
     Surface(
         modifier = Modifier
             .height(40.dp)
-            .clickable { onClick() },
+            .clickable {
+                onClick()
+            },
         shape = RoundedCornerShape(50),
         color = if (selected) accentColor else Color.White,
         shadowElevation = if (selected) 3.dp else 1.dp,
         border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (selected) accentColor else SoftBorder
+            width = 1.dp,
+            color = if (selected) accentColor else SoftBorder
         )
     ) {
         Row(
@@ -492,6 +530,7 @@ private fun DocumentGridItem(
     type: String,
     owner: String,
     date: String,
+    time: String,
     fileUri: String,
     onClick: () -> Unit,
     onEditClick: () -> Unit,
@@ -503,8 +542,10 @@ private fun DocumentGridItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(190.dp)
-            .clickable { onClick() },
+            .height(198.dp)
+            .clickable {
+                onClick()
+            },
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -534,7 +575,7 @@ private fun DocumentGridItem(
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = title.ifBlank { "Untitled Document" },
@@ -556,7 +597,7 @@ private fun DocumentGridItem(
             )
 
             Text(
-                text = date.ifBlank { "No date set" },
+                text = buildDateTimeText(date, time),
                 style = MaterialTheme.typography.bodySmall,
                 color = SoftText,
                 maxLines = 1,
@@ -594,6 +635,16 @@ private fun DocumentGridItem(
             }
         }
     }
+}
+
+private fun buildDateTimeText(
+    date: String,
+    time: String
+): String {
+    val cleanDate = date.ifBlank { "No date set" }
+    val cleanTime = time.ifBlank { "No time set" }
+
+    return "$cleanDate • $cleanTime"
 }
 
 @Composable
@@ -677,10 +728,14 @@ private fun DocumentMoreMenu(
 
         DropdownMenu(
             expanded = menuExpanded,
-            onDismissRequest = { menuExpanded = false }
+            onDismissRequest = {
+                menuExpanded = false
+            }
         ) {
             DropdownMenuItem(
-                text = { Text("View Details") },
+                text = {
+                    Text("View Details")
+                },
                 onClick = {
                     menuExpanded = false
                     onViewDetails()
@@ -688,7 +743,9 @@ private fun DocumentMoreMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Edit") },
+                text = {
+                    Text("Edit")
+                },
                 onClick = {
                     menuExpanded = false
                     onEdit()
@@ -696,7 +753,9 @@ private fun DocumentMoreMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Delete") },
+                text = {
+                    Text("Delete")
+                },
                 onClick = {
                     menuExpanded = false
                     onDelete()
@@ -713,8 +772,10 @@ private fun AddDocumentGridItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(190.dp)
-            .clickable { onClick() },
+            .height(198.dp)
+            .clickable {
+                onClick()
+            },
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder),
@@ -814,7 +875,10 @@ private fun EmptyDocumentState(
                 colors = ButtonDefaults.buttonColors(containerColor = MedGreen),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null)
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null
+                )
 
                 Spacer(modifier = Modifier.width(8.dp))
 

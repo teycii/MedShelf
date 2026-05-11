@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
@@ -110,7 +111,8 @@ fun DocumentDetailsScreen(
                     )
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 18.dp, bottom = 110.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 DocumentPreviewCard(
@@ -124,7 +126,8 @@ fun DocumentDetailsScreen(
                     owner = document.owner,
                     category = document.type,
                     clinic = document.clinic,
-                    date = document.date
+                    date = document.date,
+                    time = document.time
                 )
 
                 NotesCard(notes = document.notes)
@@ -135,7 +138,7 @@ fun DocumentDetailsScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp),
+                        .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = BlueAction)
                 ) {
@@ -161,7 +164,7 @@ fun DocumentDetailsScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp),
+                        .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MedGreen)
                 ) {
@@ -199,25 +202,23 @@ fun DocumentDetailsScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(16.dp)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MedGreen),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Download,
-                        contentDescription = null,
-                        tint = MedGreen
+                        contentDescription = null
                     )
 
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
                         text = "Download File",
-                        color = MedGreen,
                         fontWeight = FontWeight.Bold
                     )
                 }
-
-                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }
@@ -308,13 +309,17 @@ private fun DocumentPreviewCard(
                 text = title.ifBlank { "Untitled Document" },
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = DarkText
+                color = DarkText,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
 
             Text(
                 text = type.ifBlank { "Uncategorized" },
                 color = SoftText,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -340,7 +345,9 @@ private fun DocumentPreviewCard(
                         text = displayOwner,
                         color = MedGreen,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelMedium
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -416,7 +423,8 @@ private fun InfoCard(
     owner: String,
     category: String,
     clinic: String,
-    date: String
+    date: String,
+    time: String
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -427,8 +435,13 @@ private fun InfoCard(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
+            SectionTitle(
+                icon = Icons.Filled.Info,
+                title = "Document Information"
+            )
+
             DetailRow(
                 icon = Icons.Filled.Person,
                 label = "Profile / Owner",
@@ -448,9 +461,15 @@ private fun InfoCard(
             )
 
             DetailRow(
-                icon = Icons.Filled.Description,
+                icon = Icons.Filled.CalendarMonth,
                 label = "Document Date",
                 value = date.ifBlank { "Not specified" }
+            )
+
+            DetailRow(
+                icon = Icons.Filled.AccessTime,
+                label = "Document Time",
+                value = time.ifBlank { "Not specified" }
             )
         }
     }
@@ -466,26 +485,13 @@ private fun NotesCard(notes: String) {
         border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Filled.NoteAlt,
-                    contentDescription = null,
-                    tint = MedGreen
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Text(
-                    text = "Notes",
-                    fontWeight = FontWeight.Bold,
-                    color = DarkText,
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
+            SectionTitle(
+                icon = Icons.Filled.NoteAlt,
+                title = "Notes"
+            )
 
             Text(
                 text = notes.ifBlank { "No notes added." },
@@ -497,22 +503,63 @@ private fun NotesCard(notes: String) {
 }
 
 @Composable
+private fun SectionTitle(
+    icon: ImageVector,
+    title: String
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .background(Color(0xFFEAFBF7), RoundedCornerShape(13.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MedGreen,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Text(
+            text = title,
+            color = DarkText,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium
+        )
+    }
+}
+
+@Composable
 private fun DetailRow(
     icon: ImageVector,
     label: String,
     value: String
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MedGreen,
-            modifier = Modifier.size(22.dp)
-        )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .background(Color(0xFFF2FFFC), RoundedCornerShape(11.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MedGreen,
+                modifier = Modifier.size(19.dp)
+            )
+        }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
                 color = SoftText,
@@ -522,7 +569,8 @@ private fun DetailRow(
             Text(
                 text = value.ifBlank { "Not specified" },
                 color = DarkText,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }

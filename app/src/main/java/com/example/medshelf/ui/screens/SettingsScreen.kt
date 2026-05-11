@@ -9,15 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FontDownload
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Password
-import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.TextDecrease
-import androidx.compose.material.icons.filled.TextIncrease
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,36 +29,21 @@ private val DarkText = Color(0xFF111827)
 private val SoftText = Color(0xFF64748B)
 private val SoftBorder = Color(0xFFE2E8F0)
 private val ErrorRed = Color(0xFFEF4444)
-private val Purple = Color(0xFF7C3AED)
 
 @Composable
 fun SettingsScreen(
     navController: NavController,
     settingsManager: AppSettingsManager
 ) {
-    var appLockEnabled by remember {
-        mutableStateOf(settingsManager.isAppLockEnabled())
-    }
+    var appLockEnabled by remember { mutableStateOf(settingsManager.isAppLockEnabled()) }
+    var currentPasscode by remember { mutableStateOf("") }
+    var newPasscode by remember { mutableStateOf("") }
+    var confirmPasscode by remember { mutableStateOf("") }
+    var fontScale by remember { mutableFloatStateOf(settingsManager.getFontScale()) }
+    var message by remember { mutableStateOf("") }
+    var isErrorMessage by remember { mutableStateOf(false) }
 
-    var passcode by remember {
-        mutableStateOf("")
-    }
-
-    var confirmPasscode by remember {
-        mutableStateOf("")
-    }
-
-    var fontScale by remember {
-        mutableFloatStateOf(settingsManager.getFontScale())
-    }
-
-    var message by remember {
-        mutableStateOf("")
-    }
-
-    var isErrorMessage by remember {
-        mutableStateOf(false)
-    }
+    val hasExistingPasscode = settingsManager.hasPasscode()
 
     Scaffold(
         topBar = {
@@ -125,24 +102,16 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = {
                             fontScale = (fontScale - 0.10f).coerceAtLeast(0.85f)
                             settingsManager.setFontScale(fontScale)
-                            message = "Font size updated. Restart screen/app if changes are not visible."
+                            message = "Font size updated."
                             isErrorMessage = false
                         }
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.TextDecrease,
-                            contentDescription = "Decrease Font",
-                            tint = MedGreen
-                        )
+                        Icon(Icons.Filled.TextDecrease, contentDescription = null, tint = MedGreen)
                     }
 
                     Slider(
@@ -150,7 +119,7 @@ fun SettingsScreen(
                         onValueChange = {
                             fontScale = it
                             settingsManager.setFontScale(it)
-                            message = "Font size updated. Restart screen/app if changes are not visible."
+                            message = "Font size updated."
                             isErrorMessage = false
                         },
                         valueRange = 0.85f..1.25f,
@@ -165,15 +134,11 @@ fun SettingsScreen(
                         onClick = {
                             fontScale = (fontScale + 0.10f).coerceAtMost(1.25f)
                             settingsManager.setFontScale(fontScale)
-                            message = "Font size updated. Restart screen/app if changes are not visible."
+                            message = "Font size updated."
                             isErrorMessage = false
                         }
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.TextIncrease,
-                            contentDescription = "Increase Font",
-                            tint = MedGreen
-                        )
+                        Icon(Icons.Filled.TextIncrease, contentDescription = null, tint = MedGreen)
                     }
                 }
 
@@ -201,23 +166,12 @@ fun SettingsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(
-                            color = Color(0xFFF8FFFC),
-                            shape = RoundedCornerShape(18.dp)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = Color(0xFFD6F5EF),
-                            shape = RoundedCornerShape(18.dp)
-                        )
+                        .background(Color(0xFFF8FFFC), RoundedCornerShape(18.dp))
+                        .border(1.dp, Color(0xFFD6F5EF), RoundedCornerShape(18.dp))
                         .padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Lock,
-                        contentDescription = null,
-                        tint = MedGreen
-                    )
+                    Icon(Icons.Filled.Lock, contentDescription = null, tint = MedGreen)
 
                     Spacer(modifier = Modifier.width(12.dp))
 
@@ -245,14 +199,21 @@ fun SettingsScreen(
                             if (enabled && !settingsManager.hasPasscode()) {
                                 message = "Set a passcode first before enabling App Lock."
                                 isErrorMessage = true
+                            } else if (!enabled && settingsManager.hasPasscode()) {
+                                if (currentPasscode != settingsManager.getPasscode()) {
+                                    message = "Enter your current passcode before disabling App Lock."
+                                    isErrorMessage = true
+                                } else {
+                                    appLockEnabled = false
+                                    settingsManager.setAppLockEnabled(false)
+                                    currentPasscode = ""
+                                    message = "App Lock disabled."
+                                    isErrorMessage = false
+                                }
                             } else {
                                 appLockEnabled = enabled
                                 settingsManager.setAppLockEnabled(enabled)
-                                message = if (enabled) {
-                                    "App Lock enabled."
-                                } else {
-                                    "App Lock disabled."
-                                }
+                                message = if (enabled) "App Lock enabled." else "App Lock disabled."
                                 isErrorMessage = false
                             }
                         },
@@ -263,62 +224,73 @@ fun SettingsScreen(
                     )
                 }
 
-                OutlinedTextField(
-                    value = passcode,
+                if (hasExistingPasscode) {
+                    SecurePasscodeField(
+                        value = currentPasscode,
+                        onValueChange = {
+                            currentPasscode = it
+                            message = ""
+                        },
+                        label = "Current Passcode",
+                        placeholder = "Enter current passcode"
+                    )
+                }
+
+                SecurePasscodeField(
+                    value = newPasscode,
                     onValueChange = {
-                        passcode = it.filter { char -> char.isDigit() }.take(6)
+                        newPasscode = it
                         message = ""
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("New Passcode") },
-                    placeholder = { Text("4 to 6 digits") },
-                    leadingIcon = {
-                        Icon(Icons.Filled.Password, contentDescription = null)
-                    },
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    singleLine = true,
-                    shape = RoundedCornerShape(18.dp)
+                    label = if (hasExistingPasscode) "New Passcode" else "Create Passcode",
+                    placeholder = "4 to 6 digits"
                 )
 
-                OutlinedTextField(
+                SecurePasscodeField(
                     value = confirmPasscode,
                     onValueChange = {
-                        confirmPasscode = it.filter { char -> char.isDigit() }.take(6)
+                        confirmPasscode = it
                         message = ""
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Confirm Passcode") },
-                    placeholder = { Text("Re-enter passcode") },
-                    leadingIcon = {
-                        Icon(Icons.Filled.Password, contentDescription = null)
-                    },
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    singleLine = true,
-                    shape = RoundedCornerShape(18.dp)
+                    label = "Confirm New Passcode",
+                    placeholder = "Re-enter new passcode"
                 )
 
                 Button(
                     onClick = {
+                        val savedPasscode = settingsManager.getPasscode()
+
                         when {
-                            passcode.length < 4 -> {
-                                message = "Passcode must be at least 4 digits."
+                            hasExistingPasscode && currentPasscode != savedPasscode -> {
+                                message = "Current passcode is incorrect."
                                 isErrorMessage = true
                             }
 
-                            passcode != confirmPasscode -> {
-                                message = "Passcodes do not match."
+                            newPasscode.length < 4 -> {
+                                message = "New passcode must be at least 4 digits."
+                                isErrorMessage = true
+                            }
+
+                            newPasscode != confirmPasscode -> {
+                                message = "New passcodes do not match."
                                 isErrorMessage = true
                             }
 
                             else -> {
-                                settingsManager.savePasscode(passcode)
+                                settingsManager.savePasscode(newPasscode)
                                 settingsManager.setAppLockEnabled(true)
+
                                 appLockEnabled = true
-                                passcode = ""
+                                currentPasscode = ""
+                                newPasscode = ""
                                 confirmPasscode = ""
-                                message = "Passcode saved and App Lock enabled."
+
+                                message = if (hasExistingPasscode) {
+                                    "Passcode changed successfully."
+                                } else {
+                                    "Passcode created and App Lock enabled."
+                                }
+
                                 isErrorMessage = false
                             }
                         }
@@ -334,17 +306,29 @@ fun SettingsScreen(
                 ) {
                     Icon(Icons.Filled.Security, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save Passcode", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (hasExistingPasscode) "Change Passcode" else "Save Passcode",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 OutlinedButton(
                     onClick = {
-                        settingsManager.clearPasscode()
-                        appLockEnabled = false
-                        passcode = ""
-                        confirmPasscode = ""
-                        message = "Passcode removed and App Lock disabled."
-                        isErrorMessage = false
+                        if (!settingsManager.hasPasscode()) {
+                            message = "No passcode is currently set."
+                            isErrorMessage = true
+                        } else if (currentPasscode != settingsManager.getPasscode()) {
+                            message = "Enter your current passcode before removing App Lock."
+                            isErrorMessage = true
+                        } else {
+                            settingsManager.clearPasscode()
+                            appLockEnabled = false
+                            currentPasscode = ""
+                            newPasscode = ""
+                            confirmPasscode = ""
+                            message = "Passcode removed and App Lock disabled."
+                            isErrorMessage = false
+                        }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp)
@@ -373,6 +357,31 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
+
+@Composable
+private fun SecurePasscodeField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    placeholder: String
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = {
+            onValueChange(it.filter { char -> char.isDigit() }.take(6))
+        },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(label) },
+        placeholder = { Text(placeholder) },
+        leadingIcon = {
+            Icon(Icons.Filled.Password, contentDescription = null)
+        },
+        visualTransformation = PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        singleLine = true,
+        shape = RoundedCornerShape(18.dp)
+    )
 }
 
 @Composable
@@ -485,10 +494,7 @@ private fun SettingsInfoRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                color = Color(0xFFF8FAFC),
-                shape = RoundedCornerShape(14.dp)
-            )
+            .background(Color(0xFFF8FAFC), RoundedCornerShape(14.dp))
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

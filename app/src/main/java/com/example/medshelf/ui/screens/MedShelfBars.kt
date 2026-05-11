@@ -157,7 +157,7 @@ fun MedShelfBottomBar(navController: NavController) {
                     )
                 }
 
-                Spacer(modifier = Modifier.width(78.dp))
+                Spacer(modifier = Modifier.width(76.dp))
 
                 Row(
                     modifier = Modifier.weight(1f),
@@ -184,10 +184,11 @@ fun MedShelfBottomBar(navController: NavController) {
         }
 
         CenterAddButton(
-            selected = currentRoute == "add_document",
             enabled = currentRoute != "add_document",
             onClick = { navigateRoot(navController, "add_document") },
-            modifier = Modifier.align(Alignment.TopCenter)
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = (-5).dp)
         )
     }
 }
@@ -237,25 +238,24 @@ private fun BottomNavItem(
 
 @Composable
 private fun CenterAddButton(
-    selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier
-            .size(66.dp)
+            .size(64.dp)
             .clickable(enabled = enabled) { onClick() },
         shape = CircleShape,
         color = MedGreen,
-        shadowElevation = 12.dp
+        shadowElevation = 10.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 imageVector = Icons.Filled.Add,
                 contentDescription = "Add Document",
                 tint = Color.White,
-                modifier = Modifier.size(34.dp)
+                modifier = Modifier.size(32.dp)
             )
         }
     }
@@ -280,7 +280,6 @@ private fun navigateRoot(
     route: String
 ) {
     val currentRoute = navController.currentBackStackEntry?.destination?.route
-
     if (currentRoute == route) return
 
     navController.navigate(route) {
