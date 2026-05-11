@@ -18,7 +18,6 @@ class EmergencySnapshotActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Show over lockscreen
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
@@ -31,8 +30,8 @@ class EmergencySnapshotActivity : ComponentActivity() {
                         WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
             )
         }
-        
-        // Ensure the screen stays on and allows locking while on
+
+        @Suppress("DEPRECATION")
         window.addFlags(WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON)
 
         val database = AppDatabase.getDatabase(applicationContext)
@@ -52,10 +51,14 @@ class EmergencySnapshotActivity : ComponentActivity() {
                 EmergencySnapshotContent(
                     name = user?.let { "${it.firstName} ${it.lastName}" } ?: "Not set",
                     age = user?.age?.toString() ?: "Not set",
+                    birthday = user?.birthday ?: "Not set",
+                    sex = user?.sex ?: "Not set",
+                    address = user?.address ?: "Not set",
                     bloodType = user?.bloodType ?: "Not set",
-                    allergies = user?.allergies ?: "Not set",
-                    conditions = user?.conditions ?: "Not set",
-                    medications = user?.medications ?: "Not set",
+                    allergies = user?.allergies ?: "None",
+                    conditions = user?.conditions ?: "None",
+                    medications = user?.medications ?: "None",
+                    importantNote = user?.importantNote ?: "None",
                     emergencyContact = user?.let {
                         "${it.emergencyContactName} (${it.emergencyContactNumber})"
                     } ?: "Not set",

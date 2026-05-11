@@ -8,13 +8,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bloodtype
+import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Wc
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -41,6 +45,8 @@ private val EmergencyRed = Color(0xFFEF4444)
 private val EmergencyGreen = Color(0xFF009688)
 private val EmergencyYellow = Color(0xFFF59E0B)
 private val EmergencyPurple = Color(0xFF7C3AED)
+private val EmergencyBlue = Color(0xFF3B82F6)
+private val EmergencyPink = Color(0xFFEC4899)
 private val CardWhite = Color.White.copy(alpha = 0.10f)
 private val BorderWhite = Color.White.copy(alpha = 0.14f)
 
@@ -54,10 +60,14 @@ fun EmergencySnapshotScreen(
     EmergencySnapshotContent(
         name = user?.let { "${it.firstName} ${it.lastName}" } ?: "Not set",
         age = user?.age?.toString() ?: "Not set",
+        birthday = user?.birthday ?: "Not set",
+        sex = user?.sex ?: "Not set",
+        address = user?.address ?: "Not set",
         bloodType = user?.bloodType ?: "Not set",
-        allergies = user?.allergies ?: "Not set",
-        conditions = user?.conditions ?: "Not set",
-        medications = user?.medications ?: "Not set",
+        allergies = user?.allergies ?: "None",
+        conditions = user?.conditions ?: "None",
+        medications = user?.medications ?: "None",
+        importantNote = user?.importantNote ?: "None",
         emergencyContact = user?.let {
             "${it.emergencyContactName} (${it.emergencyContactNumber})"
         } ?: "Not set",
@@ -69,10 +79,14 @@ fun EmergencySnapshotScreen(
 fun EmergencySnapshotContent(
     name: String,
     age: String,
+    birthday: String,
+    sex: String,
+    address: String,
     bloodType: String,
     allergies: String,
     conditions: String,
     medications: String,
+    importantNote: String,
     emergencyContact: String,
     onClose: () -> Unit
 ) {
@@ -107,6 +121,9 @@ fun EmergencySnapshotContent(
             EmergencyIdentityCard(
                 name = name,
                 age = age,
+                birthday = birthday,
+                sex = sex,
+                address = address,
                 bloodType = bloodType
             )
 
@@ -116,6 +133,7 @@ fun EmergencySnapshotContent(
                 allergies = allergies,
                 conditions = conditions,
                 medications = medications,
+                importantNote = importantNote,
                 emergencyContact = emergencyContact
             )
 
@@ -186,6 +204,9 @@ private fun EmergencyTopSection(
 private fun EmergencyIdentityCard(
     name: String,
     age: String,
+    birthday: String,
+    sex: String,
+    address: String,
     bloodType: String
 ) {
     Card(
@@ -275,6 +296,33 @@ private fun EmergencyIdentityCard(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            EmergencyInfoRow(
+                icon = Icons.Default.Cake,
+                label = "Birthday",
+                value = birthday,
+                color = EmergencyPink
+            )
+
+            EmergencyDivider()
+
+            EmergencyInfoRow(
+                icon = Icons.Default.Wc,
+                label = "Sex",
+                value = sex,
+                color = EmergencyBlue
+            )
+
+            EmergencyDivider()
+
+            EmergencyInfoRow(
+                icon = Icons.Default.Home,
+                label = "Address",
+                value = address,
+                color = EmergencyGreen
+            )
         }
     }
 }
@@ -284,6 +332,7 @@ private fun EmergencyPriorityCard(
     allergies: String,
     conditions: String,
     medications: String,
+    importantNote: String,
     emergencyContact: String
 ) {
     Card(
@@ -325,6 +374,15 @@ private fun EmergencyPriorityCard(
                 label = "Current Medications",
                 value = medications,
                 color = EmergencyPurple
+            )
+
+            EmergencyDivider()
+
+            EmergencyInfoRow(
+                icon = Icons.Default.Info,
+                label = "Important Note",
+                value = importantNote,
+                color = EmergencyYellow
             )
 
             EmergencyDivider()

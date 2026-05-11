@@ -45,12 +45,20 @@ fun EditProfileScreen(
     var firstName by remember(user) { mutableStateOf(user?.firstName ?: "") }
     var lastName by remember(user) { mutableStateOf(user?.lastName ?: "") }
     var age by remember(user) { mutableStateOf(user?.age?.toString() ?: "") }
+
+    var birthday by remember(user) { mutableStateOf(user?.birthday ?: "") }
+    var sex by remember(user) { mutableStateOf(user?.sex ?: "") }
+    var address by remember(user) { mutableStateOf(user?.address ?: "") }
+
     var bloodType by remember(user) { mutableStateOf(user?.bloodType ?: "") }
     var allergies by remember(user) { mutableStateOf(user?.allergies ?: "") }
     var conditions by remember(user) { mutableStateOf(user?.conditions ?: "") }
     var medications by remember(user) { mutableStateOf(user?.medications ?: "") }
+    var importantNote by remember(user) { mutableStateOf(user?.importantNote ?: "") }
+
     var emergencyContactName by remember(user) { mutableStateOf(user?.emergencyContactName ?: "") }
     var emergencyContactNumber by remember(user) { mutableStateOf(user?.emergencyContactNumber ?: "") }
+
     var showErrors by remember { mutableStateOf(false) }
 
     val firstNameError = showErrors && !isValidProfileName(firstName)
@@ -134,6 +142,29 @@ fun EditProfileScreen(
                     }
                 )
 
+                ProfileInputField(
+                    label = "Birthday (Optional)",
+                    value = birthday,
+                    icon = Icons.Filled.CalendarMonth,
+                    placeholder = "e.g., January 1, 2005",
+                    onValueChange = { birthday = it }
+                )
+
+                ProfileSexDropdown(
+                    value = sex,
+                    onChange = { sex = it }
+                )
+
+                ProfileInputField(
+                    label = "Address (Optional)",
+                    value = address,
+                    icon = Icons.Filled.Home,
+                    placeholder = "City / address for emergency reference",
+                    singleLine = false,
+                    minLines = 2,
+                    onValueChange = { address = it }
+                )
+
                 ProfileBloodTypeDropdown(
                     value = bloodType,
                     isError = bloodTypeError,
@@ -173,6 +204,16 @@ fun EditProfileScreen(
                     singleLine = false,
                     minLines = 3,
                     onValueChange = { medications = it }
+                )
+
+                ProfileInputField(
+                    label = "Important Note (Optional)",
+                    value = importantNote,
+                    icon = Icons.Filled.Info,
+                    placeholder = "e.g., Do not give penicillin",
+                    singleLine = false,
+                    minLines = 3,
+                    onValueChange = { importantNote = it }
                 )
             }
 
@@ -234,10 +275,17 @@ fun EditProfileScreen(
                             firstName = firstName.trim(),
                             lastName = lastName.trim(),
                             age = age.toInt(),
+
+                            birthday = birthday.ifBlank { "Not set" },
+                            sex = sex.ifBlank { "Not set" },
+                            address = address.ifBlank { "Not set" },
+
                             bloodType = bloodType.trim(),
                             allergies = allergies.ifBlank { "None" },
                             conditions = conditions.ifBlank { "None" },
                             medications = medications.ifBlank { "None" },
+                            importantNote = importantNote.ifBlank { "None" },
+
                             emergencyContactName = emergencyContactName.trim(),
                             emergencyContactNumber = emergencyContactNumber.trim()
                         )
@@ -376,14 +424,89 @@ private fun ProfileSectionCard(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+private fun ProfileSexDropdown(
+    value: String,
+    onChange: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val sexOptions = listOf(
+        "Female",
+        "Male",
+        "Prefer not to say",
+        "Other"
+    )
+
+    Column {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { isExpanded ->
+                expanded = isExpanded
+            }
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = {},
+                readOnly = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(
+                        type = MenuAnchorType.PrimaryNotEditable,
+                        enabled = true
+                    ),
+                label = { Text("Sex (Optional)") },
+                placeholder = { Text("Select sex") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Wc,
+                        contentDescription = null,
+                        tint = SoftText
+                    )
+                },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(
+                        expanded = expanded
+                    )
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MedGreen,
+                    unfocusedBorderColor = SoftBorder,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    cursorColor = MedGreen
+                )
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = {
+                    expanded = false
+                }
+            ) {
+                sexOptions.forEach { item ->
+                    DropdownMenuItem(
+                        text = { Text(item) },
+                        onClick = {
+                            onChange(item)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 private fun ProfileBloodTypeDropdown(
     value: String,
     isError: Boolean,
     onChange: (String) -> Unit
 ) {
-    val expandedState: MutableState<Boolean> = remember {
-        mutableStateOf(false)
-    }
+    var expanded by remember { mutableStateOf(false) }
 
     val bloodTypes = listOf(
         "A+",
@@ -398,9 +521,9 @@ private fun ProfileBloodTypeDropdown(
 
     Column {
         ExposedDropdownMenuBox(
-            expanded = expandedState.value,
-            onExpandedChange = {
-                expandedState.value = it
+            expanded = expanded,
+            onExpandedChange = { isExpanded ->
+                expanded = isExpanded
             }
         ) {
             OutlinedTextField(
@@ -424,7 +547,7 @@ private fun ProfileBloodTypeDropdown(
                 },
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(
-                        expanded = expandedState.value
+                        expanded = expanded
                     )
                 },
                 singleLine = true,
@@ -441,9 +564,9 @@ private fun ProfileBloodTypeDropdown(
             )
 
             ExposedDropdownMenu(
-                expanded = expandedState.value,
+                expanded = expanded,
                 onDismissRequest = {
-                    expandedState.value = false
+                    expanded = false
                 }
             ) {
                 bloodTypes.forEach { item ->
@@ -451,7 +574,7 @@ private fun ProfileBloodTypeDropdown(
                         text = { Text(item) },
                         onClick = {
                             onChange(item)
-                            expandedState.value = false
+                            expanded = false
                         }
                     )
                 }

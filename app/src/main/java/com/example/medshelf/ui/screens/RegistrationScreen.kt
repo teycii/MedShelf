@@ -14,11 +14,14 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bloodtype
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Sick
+import androidx.compose.material.icons.filled.Wc
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
@@ -50,10 +53,17 @@ fun RegistrationScreen(
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
+
+    var birthday by remember { mutableStateOf("") }
+    var sex by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+
     var bloodType by remember { mutableStateOf("") }
     var allergies by remember { mutableStateOf("") }
     var conditions by remember { mutableStateOf("") }
     var medications by remember { mutableStateOf("") }
+    var importantNote by remember { mutableStateOf("") }
+
     var emergencyContactName by remember { mutableStateOf("") }
     var emergencyContactNumber by remember { mutableStateOf("") }
     var showErrors by remember { mutableStateOf(false) }
@@ -116,6 +126,26 @@ fun RegistrationScreen(
                         onChange = { age = it.filter { char -> char.isDigit() }.take(3) }
                     )
 
+                    ModernInputField(
+                        label = "Birthday (Optional)",
+                        value = birthday,
+                        icon = Icons.Filled.CalendarMonth,
+                        keyboardType = KeyboardType.Text,
+                        onChange = { birthday = it }
+                    )
+
+                    SexDropdown(
+                        value = sex,
+                        onChange = { sex = it }
+                    )
+
+                    ModernInputField(
+                        label = "Address (Optional)",
+                        value = address,
+                        icon = Icons.Filled.Home,
+                        onChange = { address = it }
+                    )
+
                     BloodTypeDropdown(
                         value = bloodType,
                         isError = bloodTypeError,
@@ -143,6 +173,13 @@ fun RegistrationScreen(
                         value = medications,
                         icon = Icons.Filled.Medication,
                         onChange = { medications = it }
+                    )
+
+                    ModernInputField(
+                        label = "Important Note (Optional)",
+                        value = importantNote,
+                        icon = Icons.Filled.Info,
+                        onChange = { importantNote = it }
                     )
                 }
 
@@ -199,10 +236,17 @@ fun RegistrationScreen(
                                 firstName = firstName.trim(),
                                 lastName = lastName.trim(),
                                 age = age.toInt(),
+
+                                birthday = birthday.ifBlank { "Not set" },
+                                sex = sex.ifBlank { "Not set" },
+                                address = address.ifBlank { "Not set" },
+
                                 bloodType = bloodType.trim(),
                                 allergies = allergies.ifBlank { "None" },
                                 conditions = conditions.ifBlank { "None" },
                                 medications = medications.ifBlank { "None" },
+                                importantNote = importantNote.ifBlank { "None" },
+
                                 emergencyContactName = emergencyContactName.trim(),
                                 emergencyContactNumber = emergencyContactNumber.trim()
                             )
@@ -415,6 +459,74 @@ private fun RegistrationSection(
             }
 
             content()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SexDropdown(
+    value: String,
+    onChange: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val sexOptions = listOf("Female", "Male", "Prefer not to say", "Other")
+
+    Column {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = {},
+                readOnly = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(58.dp)
+                    .menuAnchor(
+                        type = MenuAnchorType.PrimaryNotEditable,
+                        enabled = true
+                    ),
+                placeholder = {
+                    Text("Sex (Optional)", color = SoftText)
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Wc,
+                        contentDescription = null,
+                        tint = SoftText,
+                        modifier = Modifier.size(22.dp)
+                    )
+                },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(13.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MedGreen,
+                    unfocusedBorderColor = SoftBorder,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    cursorColor = MedGreen
+                )
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                sexOptions.forEach { item ->
+                    DropdownMenuItem(
+                        text = { Text(item) },
+                        onClick = {
+                            onChange(item)
+                            expanded = false
+                        }
+                    )
+                }
+            }
         }
     }
 }
