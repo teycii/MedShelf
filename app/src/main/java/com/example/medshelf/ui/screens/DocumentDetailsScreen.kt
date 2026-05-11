@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,14 +36,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.net.toUri
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.medshelf.viewmodel.DocumentViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.core.net.toUri
 
 private val MedGreen = Color(0xFF009688)
 private val DarkText = Color(0xFF111827)
@@ -73,13 +73,23 @@ fun DocumentDetailsScreen(
         },
         bottomBar = {
             MedShelfBottomBar(navController)
-        }
+        },
+        containerColor = Color.Transparent
     ) { paddingValues ->
 
         if (document == null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White,
+                                Color(0xFFF9FFFC),
+                                Color(0xFFEFFFF8)
+                            )
+                        )
+                    )
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
@@ -129,9 +139,17 @@ fun DocumentDetailsScreen(
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = BlueAction)
                 ) {
-                    Icon(Icons.Filled.Edit, contentDescription = null)
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = null
+                    )
+
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Edit Document", fontWeight = FontWeight.Bold)
+
+                    Text(
+                        text = "Edit Document",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 Button(
@@ -147,9 +165,17 @@ fun DocumentDetailsScreen(
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MedGreen)
                 ) {
-                    Icon(Icons.Filled.Visibility, contentDescription = null)
+                    Icon(
+                        imageVector = Icons.Filled.Visibility,
+                        contentDescription = null
+                    )
+
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Open File", fontWeight = FontWeight.Bold)
+
+                    Text(
+                        text = "Open File",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 OutlinedButton(
@@ -176,8 +202,14 @@ fun DocumentDetailsScreen(
                         .height(54.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Icon(Icons.Filled.Download, contentDescription = null, tint = MedGreen)
+                    Icon(
+                        imageVector = Icons.Filled.Download,
+                        contentDescription = null,
+                        tint = MedGreen
+                    )
+
                     Spacer(modifier = Modifier.width(8.dp))
+
                     Text(
                         text = "Download File",
                         color = MedGreen,
@@ -202,6 +234,7 @@ private fun DocumentPreviewCard(
     val accent = categoryColor(type)
     val icon = categoryIcon(type)
     val imageFile = isImageFile(context, fileUri)
+    val displayOwner = owner.ifBlank { "Main Profile" }
 
     var showFullScreenImage by remember { mutableStateOf(false) }
 
@@ -290,13 +323,26 @@ private fun DocumentPreviewCard(
                 color = Color(0xFFEAFBF7),
                 shape = RoundedCornerShape(50.dp)
             ) {
-                Text(
-                    text = owner.ifBlank { "Main profile" },
-                    color = MedGreen,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Person,
+                        contentDescription = null,
+                        tint = MedGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Text(
+                        text = displayOwner,
+                        color = MedGreen,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             }
         }
     }
@@ -383,10 +429,29 @@ private fun InfoCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            DetailRow(Icons.Filled.Person, "Owner", owner)
-            DetailRow(Icons.Filled.Folder, "Category", category)
-            DetailRow(Icons.Filled.LocalHospital, "Clinic / Hospital", clinic)
-            DetailRow(Icons.Filled.Description, "Date", date)
+            DetailRow(
+                icon = Icons.Filled.Person,
+                label = "Profile / Owner",
+                value = owner.ifBlank { "Main Profile" }
+            )
+
+            DetailRow(
+                icon = Icons.Filled.Folder,
+                label = "Document Type",
+                value = category.ifBlank { "Uncategorized" }
+            )
+
+            DetailRow(
+                icon = Icons.Filled.LocalHospital,
+                label = "Doctor / Clinic / Hospital",
+                value = clinic.ifBlank { "Not specified" }
+            )
+
+            DetailRow(
+                icon = Icons.Filled.Description,
+                label = "Document Date",
+                value = date.ifBlank { "Not specified" }
+            )
         }
     }
 }
@@ -404,8 +469,14 @@ private fun NotesCard(notes: String) {
             modifier = Modifier.padding(16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.NoteAlt, contentDescription = null, tint = MedGreen)
+                Icon(
+                    imageVector = Icons.Filled.NoteAlt,
+                    contentDescription = null,
+                    tint = MedGreen
+                )
+
                 Spacer(modifier = Modifier.width(8.dp))
+
                 Text(
                     text = "Notes",
                     fontWeight = FontWeight.Bold,

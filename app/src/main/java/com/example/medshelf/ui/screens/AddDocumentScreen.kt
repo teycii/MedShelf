@@ -36,6 +36,7 @@ import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.medshelf.viewmodel.DocumentViewModel
+import com.example.medshelf.viewmodel.FamilyMemberViewModel
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -51,13 +52,21 @@ private val ErrorRed = Color(0xFFEF4444)
 @Composable
 fun AddDocumentScreen(
     navController: NavController,
-    documentViewModel: DocumentViewModel
+    documentViewModel: DocumentViewModel,
+    familyMemberViewModel: FamilyMemberViewModel
 ) {
     val context = LocalContext.current
+    val familyMembers by familyMemberViewModel.familyMembers.collectAsState()
+
+    val ownerChoices = remember(familyMembers) {
+        listOf("Main Profile") + familyMembers.map { member ->
+            "${member.firstName} ${member.lastName}".trim().ifBlank { "Unnamed Profile" }
+        }
+    }
 
     var title by remember { mutableStateOf("") }
     var docType by remember { mutableStateOf("") }
-    var owner by remember { mutableStateOf("Main profile") }
+    var owner by remember { mutableStateOf("Main Profile") }
     var date by remember { mutableStateOf("") }
     var clinic by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
@@ -70,6 +79,12 @@ fun AddDocumentScreen(
     var showDatePicker by remember { mutableStateOf(false) }
 
     val datePickerState = rememberDatePickerState()
+
+    LaunchedEffect(ownerChoices) {
+        if (owner !in ownerChoices) {
+            owner = "Main Profile"
+        }
+    }
 
     val documentTypes = listOf(
         "Laboratory Result",
@@ -90,11 +105,8 @@ fun AddDocumentScreen(
         "Maintenance Medication",
         "Allergy Record",
         "Emergency Document",
-        "Family Member Record",
         "Other"
     )
-
-    val owners = listOf("Main profile", "Family member")
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -193,7 +205,7 @@ fun AddDocumentScreen(
             )
 
             Text(
-                text = "Upload, scan, or capture a medical document.",
+                text = "Upload, scan, or capture a medical document and assign it to a profile.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = SoftText
             )
@@ -310,7 +322,7 @@ fun AddDocumentScreen(
                     expanded = ownerExpanded,
                     onDismissRequest = { ownerExpanded = false }
                 ) {
-                    owners.forEach { item ->
+                    ownerChoices.forEach { item ->
                         DropdownMenuItem(
                             text = { Text(item) },
                             onClick = {
@@ -329,8 +341,8 @@ fun AddDocumentScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { showDatePicker = true },
-                label = { Text("Document Date") },
-                placeholder = { Text("Select document date") },
+                label = { Text("Document Date (Optional)") },
+                placeholder = { Text("Leave blank to use today") },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Filled.Event,
@@ -339,12 +351,24 @@ fun AddDocumentScreen(
                     )
                 },
                 trailingIcon = {
-                    IconButton(onClick = { showDatePicker = true }) {
-                        Icon(
-                            imageVector = Icons.Filled.CalendarMonth,
-                            contentDescription = "Choose Date",
-                            tint = MedGreen
-                        )
+                    Row {
+                        if (date.isNotBlank()) {
+                            IconButton(onClick = { date = "" }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Clear Date",
+                                    tint = SoftText
+                                )
+                            }
+                        }
+
+                        IconButton(onClick = { showDatePicker = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.CalendarMonth,
+                                contentDescription = "Choose Date",
+                                tint = MedGreen
+                            )
+                        }
                     }
                 },
                 shape = RoundedCornerShape(16.dp),
@@ -397,8 +421,8 @@ fun AddDocumentScreen(
                             errorMessage = "Please select the document type."
                         }
 
-                        date.isBlank() -> {
-                            errorMessage = "Please select the document date."
+                        owner.isBlank() -> {
+                            errorMessage = "Please select the profile owner."
                         }
 
                         else -> {
@@ -406,7 +430,7 @@ fun AddDocumentScreen(
                                 name = title.trim(),
                                 type = docType.trim(),
                                 owner = owner.trim(),
-                                date = date.trim(),
+                                date = date.ifBlank { formatDocumentDate(System.currentTimeMillis()) },
                                 clinic = clinic.ifBlank { "Not specified" },
                                 notes = notes.ifBlank { "No notes" },
                                 fileUri = selectedFileUri.toString()

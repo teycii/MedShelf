@@ -1,5 +1,6 @@
 package com.example.medshelf.ui.screens
 
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -561,7 +562,7 @@ private fun ProfilesCard(
                     )
 
                     Text(
-                        text = "Select whose medical files you want to manage",
+                        text = "Tap a profile to view its medical files",
                         style = MaterialTheme.typography.bodySmall,
                         color = SoftText
                     )
@@ -604,19 +605,25 @@ private fun ProfilesCard(
                 info = "Main Profile • $bloodType",
                 selected = true,
                 isYou = true,
+                backgroundColor = Color.White,
+                accentColor = MedGreen,
                 onClick = {
-                    navController.navigate("document_library")
+                    navController.navigate("document_library/${Uri.encode("Main Profile")}")
                 }
             )
 
             if (familyMembers.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(10.dp))
 
-                familyMembers.take(3).forEach { member ->
+                familyMembers.take(3).forEachIndexed { index, member ->
                     FamilyMemberMiniCard(
                         member = member,
+                        colorSet = profileColorSet(index),
                         onClick = {
-                            navController.navigate("document_library")
+                            val owner = "${member.firstName} ${member.lastName}".trim()
+                                .ifBlank { "Unnamed Profile" }
+
+                            navController.navigate("document_library/${Uri.encode(owner)}")
                         }
                     )
 
@@ -664,6 +671,25 @@ private fun ProfilesCard(
             }
         }
     }
+}
+
+private data class ProfileColorSet(
+    val background: Color,
+    val accent: Color,
+    val border: Color
+)
+
+private fun profileColorSet(index: Int): ProfileColorSet {
+    val colors = listOf(
+        ProfileColorSet(Color(0xFFFFF7ED), Color(0xFFF97316), Color(0xFFFED7AA)),
+        ProfileColorSet(Color(0xFFEEF2FF), Color(0xFF6366F1), Color(0xFFC7D2FE)),
+        ProfileColorSet(Color(0xFFFDF2F8), Color(0xFFDB2777), Color(0xFFFBCFE8)),
+        ProfileColorSet(Color(0xFFF0FDFA), Color(0xFF14B8A6), Color(0xFF99F6E4)),
+        ProfileColorSet(Color(0xFFFEFCE8), Color(0xFFEAB308), Color(0xFFFEF08A)),
+        ProfileColorSet(Color(0xFFF5F3FF), Color(0xFF8B5CF6), Color(0xFFDDD6FE))
+    )
+
+    return colors[index % colors.size]
 }
 
 @Composable
@@ -723,6 +749,7 @@ private fun EmptyFamilyProfileHint(onClick: () -> Unit) {
 @Composable
 private fun FamilyMemberMiniCard(
     member: FamilyMemberEntity,
+    colorSet: ProfileColorSet,
     onClick: () -> Unit
 ) {
     val fullName = "${member.firstName} ${member.lastName}".trim()
@@ -735,8 +762,8 @@ private fun FamilyMemberMiniCard(
             .height(72.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFBFEFD)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
+        colors = CardDefaults.cardColors(containerColor = colorSet.background),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colorSet.border)
     ) {
         Row(
             modifier = Modifier
@@ -747,13 +774,13 @@ private fun FamilyMemberMiniCard(
             Box(
                 modifier = Modifier
                     .size(38.dp)
-                    .background(Color(0xFFEAFBF7), CircleShape),
+                    .background(Color.White.copy(alpha = 0.75f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = null,
-                    tint = MedGreen,
+                    tint = colorSet.accent,
                     modifier = Modifier.size(21.dp)
                 )
             }
@@ -782,7 +809,7 @@ private fun FamilyMemberMiniCard(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = SoftText,
+                tint = colorSet.accent,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -796,6 +823,8 @@ private fun ProfileMiniCard(
     selected: Boolean,
     modifier: Modifier = Modifier,
     isYou: Boolean = false,
+    backgroundColor: Color = Color.White,
+    accentColor: Color = MedGreen,
     onClick: () -> Unit
 ) {
     Card(
@@ -804,10 +833,10 @@ private fun ProfileMiniCard(
             .height(76.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            if (selected) MedGreen else SoftBorder
+            if (selected) accentColor else SoftBorder
         )
     ) {
         Row(
@@ -819,13 +848,13 @@ private fun ProfileMiniCard(
             Box(
                 modifier = Modifier
                     .size(38.dp)
-                    .background(Color(0xFFE6F7F4), CircleShape),
+                    .background(accentColor.copy(alpha = 0.12f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = null,
-                    tint = MedGreen,
+                    tint = accentColor,
                     modifier = Modifier.size(21.dp)
                 )
             }
@@ -850,14 +879,14 @@ private fun ProfileMiniCard(
                         Box(
                             modifier = Modifier
                                 .background(
-                                    color = MedGreen.copy(alpha = 0.12f),
+                                    color = accentColor.copy(alpha = 0.12f),
                                     shape = RoundedCornerShape(8.dp)
                                 )
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "You",
-                                color = MedGreen,
+                                color = accentColor,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold
                             )
@@ -877,7 +906,7 @@ private fun ProfileMiniCard(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = SoftText,
+                tint = accentColor,
                 modifier = Modifier.size(20.dp)
             )
         }

@@ -12,9 +12,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.medshelf.data.AppDatabase
 import com.example.medshelf.ui.screens.*
 import com.example.medshelf.ui.theme.MedShelfTheme
@@ -115,14 +117,37 @@ fun MedShelfApp(database: AppDatabase) {
         composable("document_library") {
             DocumentLibraryScreen(
                 navController = navController,
-                documentViewModel = documentViewModel
+                documentViewModel = documentViewModel,
+                familyMemberViewModel = familyMemberViewModel
+            )
+        }
+
+        composable(
+            route = "document_library/{owner}",
+            arguments = listOf(
+                navArgument("owner") {
+                    type = NavType.StringType
+                    defaultValue = "All Profiles"
+                }
+            )
+        ) { backStackEntry ->
+            val owner = backStackEntry.arguments
+                ?.getString("owner")
+                ?: "All Profiles"
+
+            DocumentLibraryScreen(
+                navController = navController,
+                documentViewModel = documentViewModel,
+                familyMemberViewModel = familyMemberViewModel,
+                initialOwnerFilter = owner
             )
         }
 
         composable("add_document") {
             AddDocumentScreen(
                 navController = navController,
-                documentViewModel = documentViewModel
+                documentViewModel = documentViewModel,
+                familyMemberViewModel = familyMemberViewModel
             )
         }
 

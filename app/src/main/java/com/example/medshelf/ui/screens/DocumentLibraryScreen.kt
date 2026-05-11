@@ -33,6 +33,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.medshelf.model.DocumentEntity
 import com.example.medshelf.viewmodel.DocumentViewModel
+import com.example.medshelf.viewmodel.FamilyMemberViewModel
 
 private val MedGreen = Color(0xFF009688)
 private val DarkText = Color(0xFF111827)
@@ -43,19 +44,46 @@ private val ErrorRed = Color(0xFFEF4444)
 @Composable
 fun DocumentLibraryScreen(
     navController: NavController,
-    documentViewModel: DocumentViewModel
+    documentViewModel: DocumentViewModel,
+    familyMemberViewModel: FamilyMemberViewModel,
+    initialOwnerFilter: String = "All Profiles"
 ) {
     val documents by documentViewModel.documents.collectAsState()
+    val familyMembers by familyMemberViewModel.familyMembers.collectAsState()
 
     var selectedFilter by remember { mutableStateOf("All") }
+    var selectedOwnerFilter by remember(initialOwnerFilter) {
+        mutableStateOf(initialOwnerFilter.ifBlank { "All Profiles" })
+    }
     var searchQuery by remember { mutableStateOf("") }
     var documentToDelete by remember { mutableStateOf<DocumentEntity?>(null) }
 
     val categories = documentCategories()
 
+    val ownerFilters = remember(familyMembers) {
+        listOf("All Profiles", "Main Profile") +
+                familyMembers.map { member ->
+                    "${member.firstName} ${member.lastName}".trim()
+                        .ifBlank { "Unnamed Profile" }
+                }
+    }
+
+    LaunchedEffect(ownerFilters, initialOwnerFilter) {
+        selectedOwnerFilter = if (initialOwnerFilter in ownerFilters) {
+            initialOwnerFilter
+        } else {
+            "All Profiles"
+        }
+    }
+
     val filteredDocuments = documents
         .filter { document ->
-            selectedFilter == "All" || document.type.equals(selectedFilter, ignoreCase = true)
+            selectedOwnerFilter == "All Profiles" ||
+                    document.owner.equals(selectedOwnerFilter, ignoreCase = true)
+        }
+        .filter { document ->
+            selectedFilter == "All" ||
+                    document.type.equals(selectedFilter, ignoreCase = true)
         }
         .filter { document ->
             searchQuery.isBlank() ||
@@ -84,10 +112,7 @@ fun DocumentLibraryScreen(
                 containerColor = MedGreen,
                 contentColor = Color.White
             ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Document"
-                )
+                Icon(Icons.Default.Add, contentDescription = "Add Document")
             }
         },
         containerColor = Color.Transparent
@@ -108,18 +133,24 @@ fun DocumentLibraryScreen(
                 .padding(paddingValues)
         ) {
             LibraryHeader(
-                documentCount = documents.size
+                documentCount = documents.size,
+                filteredCount = filteredDocuments.size,
+                selectedOwner = selectedOwnerFilter
             )
 
             SearchSection(
                 searchQuery = searchQuery,
-                onSearchChange = {
-                    searchQuery = it
-                },
-                onClearSearch = {
-                    searchQuery = ""
-                }
+                onSearchChange = { searchQuery = it },
+                onClearSearch = { searchQuery = "" }
             )
+
+            ProfileFilterSection(
+                selectedOwner = selectedOwnerFilter,
+                owners = ownerFilters,
+                onOwnerSelected = { selectedOwnerFilter = it }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             CategorySection(
                 categories = categories,
@@ -132,6 +163,7 @@ fun DocumentLibraryScreen(
             if (filteredDocuments.isEmpty()) {
                 EmptyDocumentState(
                     selectedFilter = selectedFilter,
+                    selectedOwner = selectedOwnerFilter,
                     searchQuery = searchQuery,
                     onAddClick = { navController.navigate("add_document") }
                 )
@@ -181,9 +213,7 @@ fun DocumentLibraryScreen(
         documentToDelete?.let { document ->
             DeleteDocumentDialog(
                 document = document,
-                onDismiss = {
-                    documentToDelete = null
-                },
+                onDismiss = { documentToDelete = null },
                 onConfirmDelete = {
                     documentViewModel.deleteDocument(document)
                     documentToDelete = null
@@ -206,24 +236,14 @@ private fun SearchSection(
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .padding(bottom = 14.dp),
-        placeholder = {
-            Text("Search documents...")
-        },
+        placeholder = { Text("Search documents, owner, clinic...") },
         leadingIcon = {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = null,
-                tint = SoftText
-            )
+            Icon(Icons.Default.Search, contentDescription = null, tint = SoftText)
         },
         trailingIcon = {
             if (searchQuery.isNotBlank()) {
                 IconButton(onClick = onClearSearch) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Clear Search",
-                        tint = SoftText
-                    )
+                    Icon(Icons.Default.Close, contentDescription = "Clear Search", tint = SoftText)
                 }
             }
         },
@@ -240,6 +260,69 @@ private fun SearchSection(
 }
 
 @Composable
+private fun ProfileFilterSection(
+    selectedOwner: String,
+    owners: List<String>,
+    onOwnerSelected: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Profiles",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = DarkText,
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            items(owners) { owner ->
+                val selected = selectedOwner == owner
+
+                Surface(
+                    modifier = Modifier.clickable { onOwnerSelected(owner) },
+                    shape = RoundedCornerShape(50),
+                    color = if (selected) MedGreen else Color.White,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (selected) MedGreen else SoftBorder
+                    ),
+                    shadowElevation = if (selected) 2.dp else 0.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (owner == "All Profiles") Icons.Default.Groups else Icons.Default.Person,
+                            contentDescription = null,
+                            tint = if (selected) Color.White else MedGreen,
+                            modifier = Modifier.size(16.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        Text(
+                            text = owner,
+                            color = if (selected) Color.White else DarkText,
+                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun DeleteDocumentDialog(
     document: DocumentEntity,
     onDismiss: () -> Unit,
@@ -247,29 +330,18 @@ private fun DeleteDocumentDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Delete Document",
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Text("Are you sure you want to delete \"${document.name}\"?")
-        },
+        title = { Text("Delete Document", fontWeight = FontWeight.Bold) },
+        text = { Text("Are you sure you want to delete \"${document.name}\"?") },
         confirmButton = {
             Button(
                 onClick = onConfirmDelete,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = ErrorRed
-                )
+                colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)
             ) {
                 Text("Delete")
             }
         },
         dismissButton = {
-            TextButton(
-                onClick = onDismiss
-            ) {
+            TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
         }
@@ -278,7 +350,9 @@ private fun DeleteDocumentDialog(
 
 @Composable
 private fun LibraryHeader(
-    documentCount: Int
+    documentCount: Int,
+    filteredCount: Int,
+    selectedOwner: String
 ) {
     Column(
         modifier = Modifier
@@ -296,7 +370,11 @@ private fun LibraryHeader(
         Spacer(modifier = Modifier.height(3.dp))
 
         Text(
-            text = "$documentCount saved record${if (documentCount == 1) "" else "s"} for you and your family",
+            text = if (selectedOwner == "All Profiles") {
+                "$documentCount saved record${if (documentCount == 1) "" else "s"} across all profiles"
+            } else {
+                "$filteredCount record${if (filteredCount == 1) "" else "s"} for $selectedOwner"
+            },
             style = MaterialTheme.typography.bodySmall,
             color = SoftText,
             maxLines = 1,
@@ -311,9 +389,7 @@ private fun CategorySection(
     selectedFilter: String,
     onSelect: (String) -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "Categories",
             style = MaterialTheme.typography.labelLarge,
@@ -382,8 +458,8 @@ private fun CategoryCapsule(
         color = if (selected) accentColor else Color.White,
         shadowElevation = if (selected) 3.dp else 1.dp,
         border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = if (selected) accentColor else SoftBorder
+            1.dp,
+            if (selected) accentColor else SoftBorder
         )
     ) {
         Row(
@@ -472,7 +548,7 @@ private fun DocumentGridItem(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = owner.ifBlank { "Main profile" },
+                text = owner.ifBlank { "Main Profile" },
                 style = MaterialTheme.typography.bodySmall,
                 color = SoftText,
                 maxLines = 1,
@@ -590,11 +666,7 @@ private fun DocumentMoreMenu(
     var menuExpanded by remember { mutableStateOf(false) }
 
     Box {
-        IconButton(
-            onClick = {
-                menuExpanded = true
-            }
-        ) {
+        IconButton(onClick = { menuExpanded = true }) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = "More",
@@ -605,9 +677,7 @@ private fun DocumentMoreMenu(
 
         DropdownMenu(
             expanded = menuExpanded,
-            onDismissRequest = {
-                menuExpanded = false
-            }
+            onDismissRequest = { menuExpanded = false }
         ) {
             DropdownMenuItem(
                 text = { Text("View Details") },
@@ -654,9 +724,7 @@ private fun AddDocumentGridItem(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = MedGreen.copy(alpha = 0.12f)
@@ -687,6 +755,7 @@ private fun AddDocumentGridItem(
 @Composable
 private fun EmptyDocumentState(
     selectedFilter: String,
+    selectedOwner: String,
     searchQuery: String,
     onAddClick: () -> Unit
 ) {
@@ -716,6 +785,7 @@ private fun EmptyDocumentState(
         Text(
             text = when {
                 searchQuery.isNotBlank() -> "No results found"
+                selectedOwner != "All Profiles" -> "No documents for $selectedOwner"
                 selectedFilter == "All" -> "No documents yet"
                 else -> "No $selectedFilter documents"
             },
@@ -744,10 +814,7 @@ private fun EmptyDocumentState(
                 colors = ButtonDefaults.buttonColors(containerColor = MedGreen),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null
-                )
+                Icon(Icons.Default.Add, contentDescription = null)
 
                 Spacer(modifier = Modifier.width(8.dp))
 
