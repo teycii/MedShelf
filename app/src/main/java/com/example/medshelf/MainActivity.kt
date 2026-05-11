@@ -19,6 +19,8 @@ import com.example.medshelf.data.AppDatabase
 import com.example.medshelf.ui.screens.*
 import com.example.medshelf.ui.theme.MedShelfTheme
 import com.example.medshelf.viewmodel.DocumentViewModel
+import com.example.medshelf.viewmodel.FamilyMemberViewModel
+import com.example.medshelf.viewmodel.FamilyMemberViewModelFactory
 import com.example.medshelf.viewmodel.NoteViewModel
 import com.example.medshelf.viewmodel.ReminderViewModel
 import com.example.medshelf.viewmodel.UserViewModel
@@ -49,6 +51,10 @@ fun MedShelfApp(database: AppDatabase) {
 
     val userViewModel: UserViewModel = viewModel(
         factory = UserViewModelFactory(database.userDao())
+    )
+
+    val familyMemberViewModel: FamilyMemberViewModel = viewModel(
+        factory = FamilyMemberViewModelFactory(database.familyMemberDao())
     )
 
     NavHost(
@@ -101,7 +107,8 @@ fun MedShelfApp(database: AppDatabase) {
                 navController = navController,
                 userViewModel = userViewModel,
                 documentViewModel = documentViewModel,
-                reminderViewModel = reminderViewModel
+                reminderViewModel = reminderViewModel,
+                familyMemberViewModel = familyMemberViewModel
             )
         }
 
@@ -154,6 +161,13 @@ fun MedShelfApp(database: AppDatabase) {
             EditProfileScreen(
                 navController = navController,
                 userViewModel = userViewModel
+            )
+        }
+
+        composable("add_family_member") {
+            AddFamilyMemberProfilesScreen(
+                navController = navController,
+                familyMemberViewModel = familyMemberViewModel
             )
         }
 

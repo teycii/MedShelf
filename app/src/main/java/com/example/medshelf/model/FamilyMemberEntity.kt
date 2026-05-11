@@ -10,6 +10,8 @@ data class FamilyMemberEntity(
 
     val firstName: String,
     val lastName: String,
+
+    // User types this manually: Mother, Father, Child, Guardian, Patient, etc.
     val relationship: String,
 
     val age: Int?,
@@ -24,8 +26,12 @@ data class FamilyMemberEntity(
     val emergencyContactNumber: String,
 
     val notes: String,
+
     val createdAt: Long = System.currentTimeMillis()
 ) {
     val fullName: String
         get() = "$firstName $lastName".trim()
+
+    val displayLabel: String
+        get() = if (relationship.isBlank()) fullName else "$fullName • $relationship"
 }
