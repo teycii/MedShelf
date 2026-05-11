@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.medshelf.model.FamilyMemberEntity
@@ -61,6 +62,15 @@ fun EditFamilyMemberScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White,
+                                Color(0xFFF8FFFC),
+                                Color(0xFFEFFFF8)
+                            )
+                        )
+                    )
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
@@ -114,6 +124,8 @@ private fun EditFamilyMemberContent(
     var sexExpanded by remember { mutableStateOf(false) }
     var bloodTypeExpanded by remember { mutableStateOf(false) }
 
+    val fullName = "$firstName $lastName".trim().ifBlank { "Family Profile" }
+
     val firstNameError = showErrors && firstName.trim().isBlank()
     val lastNameError = showErrors && lastName.trim().isBlank()
     val relationshipError = showErrors && relationship.trim().isBlank()
@@ -129,7 +141,7 @@ private fun EditFamilyMemberContent(
                 Brush.verticalGradient(
                     listOf(
                         Color.White,
-                        Color(0xFFF9FFFC),
+                        Color(0xFFF8FFFC),
                         Color(0xFFEFFFF8)
                     )
                 )
@@ -137,10 +149,14 @@ private fun EditFamilyMemberContent(
             .padding(paddingValues)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
-            .padding(top = 18.dp, bottom = 110.dp),
+            .padding(top = 18.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        EditHeader()
+        EditHeroCard(
+            name = fullName,
+            relationship = relationship,
+            bloodType = bloodType
+        )
 
         EditSection(
             title = "Basic Information",
@@ -183,7 +199,7 @@ private fun EditFamilyMemberContent(
             )
 
             EditInputField(
-                label = "Age (Optional)",
+                label = "Age",
                 value = age,
                 icon = Icons.Filled.CalendarMonth,
                 keyboardType = KeyboardType.Number,
@@ -197,19 +213,17 @@ private fun EditFamilyMemberContent(
 
             ExposedDropdownMenuBox(
                 expanded = sexExpanded,
-                onExpandedChange = { sexExpanded = !sexExpanded }
+                onExpandedChange = {
+                    sexExpanded = !sexExpanded
+                }
             ) {
                 OutlinedTextField(
                     value = sex,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Sex (Optional)") },
+                    label = { Text("Sex") },
                     leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Wc,
-                            contentDescription = null,
-                            tint = SoftText
-                        )
+                        FieldIcon(Icons.Outlined.Wc)
                     },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = sexExpanded)
@@ -226,7 +240,9 @@ private fun EditFamilyMemberContent(
 
                 ExposedDropdownMenu(
                     expanded = sexExpanded,
-                    onDismissRequest = { sexExpanded = false }
+                    onDismissRequest = {
+                        sexExpanded = false
+                    }
                 ) {
                     sexOptions.forEach { item ->
                         DropdownMenuItem(
@@ -247,19 +263,17 @@ private fun EditFamilyMemberContent(
         ) {
             ExposedDropdownMenuBox(
                 expanded = bloodTypeExpanded,
-                onExpandedChange = { bloodTypeExpanded = !bloodTypeExpanded }
+                onExpandedChange = {
+                    bloodTypeExpanded = !bloodTypeExpanded
+                }
             ) {
                 OutlinedTextField(
                     value = bloodType,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Blood Type (Optional)") },
+                    label = { Text("Blood Type") },
                     leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Filled.Bloodtype,
-                            contentDescription = null,
-                            tint = SoftText
-                        )
+                        FieldIcon(Icons.Filled.Bloodtype)
                     },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = bloodTypeExpanded)
@@ -276,7 +290,9 @@ private fun EditFamilyMemberContent(
 
                 ExposedDropdownMenu(
                     expanded = bloodTypeExpanded,
-                    onDismissRequest = { bloodTypeExpanded = false }
+                    onDismissRequest = {
+                        bloodTypeExpanded = false
+                    }
                 ) {
                     bloodTypes.forEach { item ->
                         DropdownMenuItem(
@@ -291,21 +307,21 @@ private fun EditFamilyMemberContent(
             }
 
             EditInputField(
-                label = "Allergies (Optional)",
+                label = "Allergies",
                 value = allergies,
                 icon = Icons.Filled.Warning,
                 onValueChange = { allergies = it }
             )
 
             EditInputField(
-                label = "Medical Conditions (Optional)",
+                label = "Medical Conditions",
                 value = conditions,
                 icon = Icons.Filled.MonitorHeart,
                 onValueChange = { conditions = it }
             )
 
             EditInputField(
-                label = "Medications (Optional)",
+                label = "Medications",
                 value = medications,
                 icon = Icons.Filled.Medication,
                 onValueChange = { medications = it }
@@ -317,14 +333,14 @@ private fun EditFamilyMemberContent(
             icon = Icons.Filled.Call
         ) {
             EditInputField(
-                label = "Contact Name (Optional)",
+                label = "Contact Name",
                 value = emergencyContactName,
                 icon = Icons.Outlined.Person,
                 onValueChange = { emergencyContactName = it }
             )
 
             EditInputField(
-                label = "Contact Number (Optional)",
+                label = "Contact Number",
                 value = emergencyContactNumber,
                 icon = Icons.Filled.Phone,
                 keyboardType = KeyboardType.Phone,
@@ -339,7 +355,7 @@ private fun EditFamilyMemberContent(
             icon = Icons.Filled.NoteAlt
         ) {
             EditInputField(
-                label = "Important Notes (Optional)",
+                label = "Important Notes",
                 value = notes,
                 icon = Icons.Outlined.Description,
                 singleLine = false,
@@ -403,8 +419,10 @@ private fun EditFamilyMemberContent(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(54.dp),
-            shape = RoundedCornerShape(16.dp)
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = DarkText),
+            border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
         ) {
             Text(
                 text = "Cancel",
@@ -415,47 +433,125 @@ private fun EditFamilyMemberContent(
 }
 
 @Composable
-private fun EditHeader() {
+private fun EditHeroCard(
+    name: String,
+    relationship: String,
+    bloodType: String
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(24.dp),
         color = Color.White,
-        border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder),
-        shadowElevation = 2.dp
+        shadowElevation = 2.dp,
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE7F2EF))
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .background(Color(0xFFEAFBF7), RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Edit,
-                    contentDescription = null,
-                    tint = MedGreen,
-                    modifier = Modifier.size(28.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White,
+                            Color(0xFFF8FFFC)
+                        )
+                    )
                 )
+                .padding(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(66.dp)
+                        .background(Color(0xFFEAFBF7), RoundedCornerShape(20.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = null,
+                        tint = MedGreen,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Update Family Profile",
+                        color = DarkText,
+                        fontWeight = FontWeight.ExtraBold,
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Text(
+                        text = name,
+                        color = SoftText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Surface(
+                        color = Color(0xFFEAFBF7),
+                        shape = RoundedCornerShape(50.dp)
+                    ) {
+                        Text(
+                            text = "Blood Type: ${bloodType.ifBlank { "Not set" }}",
+                            color = MedGreen,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        )
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            if (relationship.isNotBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
 
-            Column {
-                Text(
-                    text = "Update Family Profile",
-                    color = DarkText,
-                    fontWeight = FontWeight.ExtraBold,
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFFF8FAFC),
+                    shape = RoundedCornerShape(16.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Badge,
+                            contentDescription = null,
+                            tint = MedGreen,
+                            modifier = Modifier.size(19.dp)
+                        )
 
-                Text(
-                    text = "Edit details, health info, contacts, and important notes.",
-                    color = SoftText,
-                    style = MaterialTheme.typography.bodySmall
-                )
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Column {
+                            Text(
+                                text = "Relationship / Label",
+                                color = SoftText,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+
+                            Text(
+                                text = relationship,
+                                color = DarkText,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -475,24 +571,31 @@ private fun EditSection(
         border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MedGreen,
-                    modifier = Modifier.size(21.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(Color(0xFFEAFBF7), RoundedCornerShape(13.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MedGreen,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
                 Text(
                     text = title,
                     color = DarkText,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleSmall
+                    style = MaterialTheme.typography.titleMedium
                 )
             }
 
@@ -520,11 +623,7 @@ private fun EditInputField(
             modifier = Modifier.fillMaxWidth(),
             label = { Text(label) },
             leadingIcon = {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = SoftText
-                )
+                FieldIcon(icon)
             },
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             isError = isError,
@@ -544,6 +643,23 @@ private fun EditInputField(
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
+    }
+}
+
+@Composable
+private fun FieldIcon(icon: ImageVector) {
+    Box(
+        modifier = Modifier
+            .size(34.dp)
+            .background(Color(0xFFF2FFFC), RoundedCornerShape(11.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MedGreen,
+            modifier = Modifier.size(19.dp)
+        )
     }
 }
 

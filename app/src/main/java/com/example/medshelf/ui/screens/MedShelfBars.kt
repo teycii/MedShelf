@@ -125,21 +125,21 @@ fun MedShelfBottomBar(navController: NavController) {
                 label = "Home",
                 icon = Icons.Outlined.Home,
                 selected = currentRoute == "dashboard",
+                enabled = currentRoute != "dashboard",
                 onClick = { navigateRoot(navController, "dashboard") }
             )
 
             BottomNavItem(
                 label = "Documents",
                 icon = Icons.Outlined.Folder,
-                selected = currentRoute == "document_library" ||
-                        currentRoute == "document_library/{owner}" ||
-                        currentRoute == "document_details/{documentId}" ||
-                        currentRoute == "edit_document/{documentId}",
+                selected = isDocumentRoute(currentRoute),
+                enabled = currentRoute != "document_library",
                 onClick = { navigateRoot(navController, "document_library") }
             )
 
             CenterAddButton(
                 selected = currentRoute == "add_document",
+                enabled = currentRoute != "add_document",
                 onClick = { navigateRoot(navController, "add_document") }
             )
 
@@ -147,14 +147,15 @@ fun MedShelfBottomBar(navController: NavController) {
                 label = "Reminders",
                 icon = Icons.Outlined.Notifications,
                 selected = currentRoute == "reminders",
+                enabled = currentRoute != "reminders",
                 onClick = { navigateRoot(navController, "reminders") }
             )
 
             BottomNavItem(
                 label = "Profile",
                 icon = Icons.Outlined.AccountCircle,
-                selected = currentRoute == "edit_profile" ||
-                        currentRoute == "add_family_member",
+                selected = isProfileRoute(currentRoute),
+                enabled = currentRoute != "edit_profile",
                 onClick = { navigateRoot(navController, "edit_profile") }
             )
         }
@@ -164,12 +165,13 @@ fun MedShelfBottomBar(navController: NavController) {
 @Composable
 private fun CenterAddButton(
     selected: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier
             .size(if (selected) 62.dp else 58.dp)
-            .clickable { onClick() },
+            .clickable(enabled = enabled) { onClick() },
         shape = CircleShape,
         color = MedGreen,
         shadowElevation = if (selected) 9.dp else 6.dp
@@ -190,12 +192,13 @@ private fun BottomNavItem(
     label: String,
     icon: ImageVector,
     selected: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .width(68.dp)
-            .clickable { onClick() }
+            .clickable(enabled = enabled) { onClick() }
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -228,11 +231,26 @@ private fun BottomNavItem(
     }
 }
 
+private fun isDocumentRoute(currentRoute: String?): Boolean {
+    return currentRoute == "document_library" ||
+            currentRoute == "document_library/{owner}" ||
+            currentRoute == "document_details/{documentId}" ||
+            currentRoute == "edit_document/{documentId}"
+}
+
+private fun isProfileRoute(currentRoute: String?): Boolean {
+    return currentRoute == "edit_profile" ||
+            currentRoute == "add_family_member" ||
+            currentRoute == "family_member_details/{familyMemberId}" ||
+            currentRoute == "edit_family_member/{familyMemberId}"
+}
+
 private fun navigateRoot(
     navController: NavController,
     route: String
 ) {
     val currentRoute = navController.currentBackStackEntry?.destination?.route
+
     if (currentRoute == route) return
 
     navController.navigate(route) {
