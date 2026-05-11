@@ -1,6 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="com.example.medshelf">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- CAMERA -->
     <uses-permission android:name="android.permission.CAMERA" />
@@ -9,22 +8,23 @@
         android:name="android.hardware.camera"
         android:required="false" />
 
-    <!-- REMINDER NOTIFICATIONS -->
+    <!-- NOTIFICATIONS -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- ALARMS -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- FOREGROUND SERVICE FOR MEDICAL ALARM -->
+    <!-- FOREGROUND SERVICE -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
-    <!-- REQUIRED FOR FOREGROUND SERVICE TYPE ON ANDROID 14+ -->
+    <!-- ANDROID 14+ FOREGROUND SERVICE TYPE -->
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
         tools:targetApi="34" />
-
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:allowBackup="true"
@@ -34,36 +34,47 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MedShelf">
 
-        <!-- CAMERA FILE PROVIDER -->
+        <!-- FILE PROVIDER -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.medshelf.provider"
             android:exported="false"
-            android:grantUriPermissions="true"
-            tools:ignore="SpellCheckingInspection">
+            android:grantUriPermissions="true">
 
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- LOCKSCREEN EMERGENCY SNAPSHOT -->
+        <activity
+            android:name=".emergency.EmergencySnapshotActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.MedShelf"
+            tools:targetApi="o_mr1" />
+
         <!-- REMINDER RECEIVER -->
         <receiver
             android:name=".reminder.ReminderNotificationReceiver"
             android:exported="false">
+
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
             </intent-filter>
+
         </receiver>
 
         <!-- REMINDER ALARM SERVICE -->
         <service
             android:name=".reminder.ReminderAlarmService"
             android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
+            android:foregroundServiceType="mediaPlayback"
+            tools:targetApi="34" />
 
-        <!-- SPLASH SCREEN -->
+        <!-- SPLASH -->
         <activity
             android:name=".SplashActivity"
             android:exported="true"
@@ -71,12 +82,12 @@
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
 
-        <!-- MAIN ACTIVITY -->
+        <!-- MAIN -->
         <activity
             android:name=".MainActivity"
             android:exported="false"

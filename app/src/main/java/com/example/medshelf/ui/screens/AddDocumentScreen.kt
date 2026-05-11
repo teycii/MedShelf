@@ -37,6 +37,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.medshelf.viewmodel.DocumentViewModel
 import com.example.medshelf.viewmodel.FamilyMemberViewModel
+import com.example.medshelf.viewmodel.UserViewModel
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date

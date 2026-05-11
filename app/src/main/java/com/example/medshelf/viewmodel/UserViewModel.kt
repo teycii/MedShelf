@@ -28,28 +28,42 @@ class UserViewModel(
         firstName: String,
         lastName: String,
         age: Int,
+        birthday: String,
+        sex: String,
+        address: String,
         bloodType: String,
         allergies: String,
         conditions: String,
         medications: String,
+        importantNote: String,
         emergencyContactName: String,
         emergencyContactNumber: String
     ) {
         viewModelScope.launch {
+
             val newUser = UserEntity(
                 id = 1,
+
                 firstName = firstName,
                 lastName = lastName,
                 age = age,
+                birthday = birthday,
+                sex = sex,
+                address = address,
+
                 bloodType = bloodType,
                 allergies = allergies,
                 conditions = conditions,
                 medications = medications,
+
+                importantNote = importantNote,
+
                 emergencyContactName = emergencyContactName,
                 emergencyContactNumber = emergencyContactNumber
             )
 
             userDao.saveUser(newUser)
+
             user.value = newUser
             isUserLoaded.value = true
         }
@@ -59,11 +73,14 @@ class UserViewModel(
 class UserViewModelFactory(
     private val userDao: UserDao
 ) : ViewModelProvider.Factory {
+
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
+
         if (modelClass.isAssignableFrom(UserViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return UserViewModel(userDao) as T
         }
+
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

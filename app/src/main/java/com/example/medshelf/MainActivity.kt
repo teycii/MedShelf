@@ -18,6 +18,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.medshelf.data.AppDatabase
+import androidx.compose.ui.platform.LocalContext
+import com.example.medshelf.emergency.EmergencyNotificationHelper
+import com.example.medshelf.ui.screens.EmergencySnapshotScreen
 import com.example.medshelf.ui.screens.*
 import com.example.medshelf.ui.theme.MedShelfTheme
 import com.example.medshelf.viewmodel.DocumentViewModel
@@ -58,6 +61,11 @@ fun MedShelfApp(database: AppDatabase) {
     val familyMemberViewModel: FamilyMemberViewModel = viewModel(
         factory = FamilyMemberViewModelFactory(database.familyMemberDao())
     )
+
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        EmergencyNotificationHelper(context).showEmergencyNotification()
+    }
 
     NavHost(
         navController = navController,

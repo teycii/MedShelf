@@ -11,10 +11,14 @@ data class UserEntity(
     val firstName: String,
     val lastName: String,
     val age: Int,
+    val birthday: String,
+    val sex: String,
+    val address: String,
     val bloodType: String,
     val allergies: String,
     val conditions: String,
     val medications: String,
+    val importantNote: String,
     val emergencyContactName: String,
     val emergencyContactNumber: String
 )
