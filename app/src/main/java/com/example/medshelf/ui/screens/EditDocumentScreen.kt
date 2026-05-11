@@ -32,6 +32,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.medshelf.viewmodel.DocumentViewModel
+import com.example.medshelf.viewmodel.FamilyMemberViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val MedGreen = Color(0xFF009688)
 private val DarkText = Color(0xFF111827)
@@ -44,10 +48,12 @@ private val ErrorRed = Color(0xFFEF4444)
 fun EditDocumentScreen(
     navController: NavController,
     documentViewModel: DocumentViewModel,
+    familyMemberViewModel: FamilyMemberViewModel,
     documentId: Int
 ) {
     val context = LocalContext.current
     val document = documentViewModel.selectedDocument.value
+    val familyMembers by familyMemberViewModel.familyMembers.collectAsState()
 
     LaunchedEffect(documentId) {
         documentViewModel.loadDocumentById(documentId)
@@ -75,9 +81,30 @@ fun EditDocumentScreen(
         return
     }
 
+    val ownerChoices = remember(familyMembers, document.owner) {
+        val familyNames = familyMembers.map { member ->
+            "${member.firstName} ${member.lastName}".trim().ifBlank { "Unnamed Profile" }
+        }
+
+        val baseChoices = listOf("Main Profile") + familyNames
+
+        if (document.owner.isNotBlank() && document.owner !in baseChoices) {
+            baseChoices + document.owner
+        } else {
+            baseChoices
+        }
+    }
+
     var title by remember(document.id) { mutableStateOf(document.name) }
     var docType by remember(document.id) { mutableStateOf(document.type) }
-    var owner by remember(document.id) { mutableStateOf(document.owner) }
+    var owner by remember(document.id) {
+        mutableStateOf(
+            when (document.owner.trim()) {
+                "Main profile" -> "Main Profile"
+                else -> document.owner.ifBlank { "Main Profile" }
+            }
+        )
+    }
     var date by remember(document.id) { mutableStateOf(document.date) }
     var clinic by remember(document.id) { mutableStateOf(document.clinic) }
     var notes by remember(document.id) { mutableStateOf(document.notes) }
@@ -86,6 +113,12 @@ fun EditDocumentScreen(
 
     var typeExpanded by remember { mutableStateOf(false) }
     var ownerExpanded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(ownerChoices) {
+        if (owner !in ownerChoices) {
+            owner = "Main Profile"
+        }
+    }
 
     val documentTypes = listOf(
         "Laboratory Result",
@@ -110,11 +143,6 @@ fun EditDocumentScreen(
         "Other"
     )
 
-    val owners = listOf(
-        "Main profile",
-        "Family member"
-    )
-
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -128,7 +156,7 @@ fun EditDocumentScreen(
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             } catch (_: Exception) {
-                // Prevent crash if already granted or unsupported.
+                // Prevent crash if permission is already granted or unsupported.
             }
         }
     }
@@ -174,7 +202,7 @@ fun EditDocumentScreen(
             )
 
             Text(
-                text = "Edit details or replace the uploaded file.",
+                text = "Edit details, assign to a profile, or replace the uploaded file.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = SoftText
             )
@@ -209,7 +237,9 @@ fun EditDocumentScreen(
 
             ExposedDropdownMenuBox(
                 expanded = typeExpanded,
-                onExpandedChange = { typeExpanded = !typeExpanded }
+                onExpandedChange = { isExpanded ->
+                    typeExpanded = isExpanded
+                }
             ) {
                 OutlinedTextField(
                     value = docType,
@@ -245,8 +275,8 @@ fun EditDocumentScreen(
                         DropdownMenuItem(
                             text = { Text(type) },
                             onClick = {
-                                docType = type
                                 typeExpanded = false
+                                docType = type
                                 errorMessage = ""
                             }
                         )
@@ -256,7 +286,9 @@ fun EditDocumentScreen(
 
             ExposedDropdownMenuBox(
                 expanded = ownerExpanded,
-                onExpandedChange = { ownerExpanded = !ownerExpanded }
+                onExpandedChange = { isExpanded ->
+                    ownerExpanded = isExpanded
+                }
             ) {
                 OutlinedTextField(
                     value = owner,
@@ -288,12 +320,13 @@ fun EditDocumentScreen(
                     expanded = ownerExpanded,
                     onDismissRequest = { ownerExpanded = false }
                 ) {
-                    owners.forEach { item ->
+                    ownerChoices.forEach { item ->
                         DropdownMenuItem(
                             text = { Text(item) },
                             onClick = {
-                                owner = item
                                 ownerExpanded = false
+                                owner = item
+                                errorMessage = ""
                             }
                         )
                     }
@@ -301,10 +334,10 @@ fun EditDocumentScreen(
             }
 
             EditDocumentInputField(
-                label = "Document Date",
+                label = "Document Date (Optional)",
                 value = date,
-                icon = Icons.Filled.Description,
-                placeholder = "e.g., May 18, 2026",
+                icon = Icons.Filled.Event,
+                placeholder = "Leave blank to use today",
                 onValueChange = {
                     date = it
                     errorMessage = ""
@@ -353,8 +386,8 @@ fun EditDocumentScreen(
                             errorMessage = "Please select the document type."
                         }
 
-                        date.isBlank() -> {
-                            errorMessage = "Please enter the document date."
+                        owner.isBlank() -> {
+                            errorMessage = "Please select the profile owner."
                         }
 
                         fileUri.isBlank() -> {
@@ -366,7 +399,9 @@ fun EditDocumentScreen(
                                 name = title.trim(),
                                 type = docType.trim(),
                                 owner = owner.trim(),
-                                date = date.trim(),
+                                date = date.ifBlank {
+                                    formatDocumentDate(System.currentTimeMillis())
+                                },
                                 clinic = clinic.ifBlank { "Not specified" },
                                 notes = notes.ifBlank { "No notes" },
                                 fileUri = fileUri
@@ -573,6 +608,11 @@ private fun isImageFile(
     } catch (_: Exception) {
         false
     }
+}
+
+private fun formatDocumentDate(millis: Long): String {
+    val formatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    return formatter.format(Date(millis))
 }
 
 private fun categoryIcon(type: String): ImageVector {
