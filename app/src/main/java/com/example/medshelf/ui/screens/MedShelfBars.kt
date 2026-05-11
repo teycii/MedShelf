@@ -20,12 +20,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 
 private val MedGreen = Color(0xFF009688)
+private val DarkText = Color(0xFF111827)
 private val SoftText = Color(0xFF64748B)
+private val SoftBorder = Color(0xFFE2E8F0)
+private val ScreenBg = Color(0xFFF8FFFC)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,38 +38,73 @@ fun MedShelfTopBar(
     navController: NavController,
     showBackButton: Boolean = true
 ) {
-    TopAppBar(
-        title = {
-            Text(
-                text = title,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        navigationIcon = {
-            if (showBackButton) {
-                IconButton(
-                    onClick = {
-                        if (!navController.popBackStack()) {
-                            navController.navigate("dashboard") {
-                                launchSingleTop = true
-                                popUpTo("dashboard") {
-                                    inclusive = false
-                                }
-                            }
-                        }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding(),
+        color = ScreenBg,
+        shadowElevation = 0.dp
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .padding(horizontal = 18.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (showBackButton) {
+                    BackButton {
+                        navigateBackFriendly(navController)
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
-                    )
+
+                    Spacer(modifier = Modifier.width(14.dp))
                 }
+
+                Text(
+                    text = title,
+                    color = DarkText,
+                    fontWeight = FontWeight.ExtraBold,
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
             }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.background
+
+            HorizontalDivider(
+                color = SoftBorder.copy(alpha = 0.65f),
+                thickness = 1.dp
+            )
+        }
+    }
+}
+
+@Composable
+private fun BackButton(
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .size(42.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(14.dp),
+        color = Color.White,
+        shadowElevation = 1.dp,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            SoftBorder
         )
-    )
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = DarkText,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
 }
 
 @Composable
@@ -76,15 +115,14 @@ fun MedShelfBottomBar(navController: NavController) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(92.dp),
+            .height(88.dp),
         color = Color.White,
-        shadowElevation = 14.dp,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        shadowElevation = 12.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 18.dp),
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -92,19 +130,16 @@ fun MedShelfBottomBar(navController: NavController) {
                 label = "Home",
                 icon = Icons.Outlined.Home,
                 selected = currentRoute == "dashboard",
-                onClick = {
-                    navigateBottom(
-                        navController = navController,
-                        route = "dashboard",
-                        currentRoute = currentRoute
-                    )
-                }
+                onClick = { navigateHome(navController) }
             )
 
             BottomNavItem(
                 label = "Documents",
                 icon = Icons.Outlined.Folder,
-                selected = currentRoute == "document_library",
+                selected = currentRoute == "document_library" ||
+                        currentRoute == "document_library/{owner}" ||
+                        currentRoute == "document_details/{documentId}" ||
+                        currentRoute == "edit_document/{documentId}",
                 onClick = {
                     navigateBottom(
                         navController = navController,
@@ -115,6 +150,7 @@ fun MedShelfBottomBar(navController: NavController) {
             )
 
             CenterAddButton(
+                selected = currentRoute == "add_document",
                 onClick = {
                     navigateBottom(
                         navController = navController,
@@ -140,7 +176,8 @@ fun MedShelfBottomBar(navController: NavController) {
             BottomNavItem(
                 label = "Profile",
                 icon = Icons.Outlined.AccountCircle,
-                selected = currentRoute == "edit_profile",
+                selected = currentRoute == "edit_profile" ||
+                        currentRoute == "add_family_member",
                 onClick = {
                     navigateBottom(
                         navController = navController,
@@ -155,22 +192,23 @@ fun MedShelfBottomBar(navController: NavController) {
 
 @Composable
 private fun CenterAddButton(
+    selected: Boolean,
     onClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier
-            .size(60.dp)
+            .size(if (selected) 62.dp else 58.dp)
             .clickable { onClick() },
         shape = CircleShape,
         color = MedGreen,
-        shadowElevation = 8.dp
+        shadowElevation = if (selected) 9.dp else 6.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 imageVector = Icons.Filled.Add,
                 contentDescription = "Add Document",
                 tint = Color.White,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(31.dp)
             )
         }
     }
@@ -186,15 +224,16 @@ private fun BottomNavItem(
     Column(
         modifier = Modifier
             .width(68.dp)
-            .clickable { onClick() },
+            .clickable { onClick() }
+            .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
                 .size(38.dp)
                 .background(
-                    color = if (selected) MedGreen.copy(alpha = 0.13f) else Color.Transparent,
-                    shape = RoundedCornerShape(14.dp)
+                    color = if (selected) MedGreen.copy(alpha = 0.12f) else Color.Transparent,
+                    shape = RoundedCornerShape(12.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -218,6 +257,18 @@ private fun BottomNavItem(
     }
 }
 
+private fun navigateHome(navController: NavController) {
+    navController.navigate("dashboard") {
+        launchSingleTop = true
+        restoreState = true
+
+        popUpTo("dashboard") {
+            inclusive = false
+            saveState = true
+        }
+    }
+}
+
 private fun navigateBottom(
     navController: NavController,
     route: String,
@@ -230,7 +281,29 @@ private fun navigateBottom(
         restoreState = true
 
         popUpTo("dashboard") {
+            inclusive = false
             saveState = true
+        }
+    }
+}
+
+private fun navigateBackFriendly(navController: NavController) {
+    when (navController.currentBackStackEntry?.destination?.route) {
+        "dashboard" -> Unit
+
+        "document_library",
+        "reminders",
+        "edit_profile",
+        "notes",
+        "add_document" -> {
+            navigateHome(navController)
+        }
+
+        else -> {
+            val didPop = navController.popBackStack()
+            if (!didPop) {
+                navigateHome(navController)
+            }
         }
     }
 }
