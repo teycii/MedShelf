@@ -1,13 +1,12 @@
 package com.example.medshelf.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Warning
@@ -17,11 +16,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.medshelf.R
 import com.example.medshelf.settings.AppSettingsManager
 
 private val MedGreen = Color(0xFF009688)
@@ -38,67 +39,58 @@ fun LockScreen(
     var passcode by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
 
-    Scaffold(
-        containerColor = Color.Transparent
-    ) { paddingValues ->
-
+    Scaffold(containerColor = Color.Transparent) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color.White,
-                            Color(0xFFF9FFFC),
-                            Color(0xFFEFFFF8)
+                            Color(0xFFFFFFFF),
+                            Color(0xFFF3FFFB),
+                            Color(0xFFE8FFF7)
                         )
                     )
                 )
                 .padding(paddingValues)
-                .padding(24.dp),
+                .padding(horizontal = 22.dp),
             contentAlignment = Alignment.Center
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(30.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(4.dp),
+                elevation = CardDefaults.cardElevation(5.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, SoftBorder)
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(76.dp)
-                            .background(Color(0xFFEAFBF7), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.HealthAndSafety,
-                            contentDescription = null,
-                            tint = MedGreen,
-                            modifier = Modifier.size(42.dp)
-                        )
-                    }
+                    Image(
+                        painter = painterResource(id = R.drawable.medshelf_icon),
+                        contentDescription = "MedShelf Logo",
+                        modifier = Modifier.size(92.dp)
+                    )
 
                     Spacer(modifier = Modifier.height(18.dp))
 
                     Text(
                         text = "MedShelf Locked",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.ExtraBold,
                         color = DarkText
                     )
 
+                    Spacer(modifier = Modifier.height(6.dp))
+
                     Text(
-                        text = "Enter your passcode to access your medical documents.",
+                        text = "Enter your passcode to continue.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = SoftText
                     )
 
-                    Spacer(modifier = Modifier.height(22.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     OutlinedTextField(
                         value = passcode,
@@ -109,17 +101,31 @@ fun LockScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Passcode") },
                         leadingIcon = {
-                            Icon(Icons.Filled.Lock, contentDescription = null)
+                            Icon(
+                                imageVector = Icons.Filled.Lock,
+                                contentDescription = null,
+                                tint = SoftText
+                            )
                         },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.NumberPassword
+                        ),
                         isError = errorMessage.isNotBlank(),
-                        shape = RoundedCornerShape(18.dp)
+                        shape = RoundedCornerShape(18.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = if (errorMessage.isNotBlank()) ErrorRed else MedGreen,
+                            unfocusedBorderColor = if (errorMessage.isNotBlank()) ErrorRed else SoftBorder,
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            errorBorderColor = ErrorRed,
+                            cursorColor = MedGreen
+                        )
                     )
 
                     if (errorMessage.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         Row(
                             modifier = Modifier
@@ -153,7 +159,7 @@ fun LockScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(22.dp))
 
                     Button(
                         onClick = {
@@ -172,7 +178,7 @@ fun LockScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
+                            .height(58.dp),
                         shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MedGreen,
