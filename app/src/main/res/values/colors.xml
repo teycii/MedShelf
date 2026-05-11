@@ -5,4 +5,5 @@
     <color name="textColor">#333333</color>
     <color name="primaryButtonColor">#30C0B4</color>
     <color name="secondaryTextColor">#757575</color>
+    <color name="ic_launcher_background">#14B8A6</color>
 </resources>

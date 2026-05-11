@@ -33,8 +33,8 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
 
-        android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:icon="@drawable/medshelf_icon"
+        android:roundIcon="@drawable/medshelf_icon"
 
         android:label="MedShelf"
         android:supportsRtl="true"
