@@ -402,7 +402,7 @@ private fun NextReminderCard(
                     text = when {
                         !hasReminder -> "Empty"
                         isOverdue -> "Overdue"
-                        else -> reminder?.status ?: "Empty"
+                        else -> reminder.status
                     },
                     color = when {
                         isOverdue -> ErrorRed
