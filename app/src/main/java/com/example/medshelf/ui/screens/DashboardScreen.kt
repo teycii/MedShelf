@@ -36,6 +36,9 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.example.medshelf.R
 
 private val MedGreen = Color(0xFF009688)
 private val DarkText = Color(0xFF111827)
@@ -229,138 +232,127 @@ private fun DashboardHeader(
         else -> "Good evening"
     }
 
-    Surface(
+    val today = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding(),
-        shape = RoundedCornerShape(24.dp),
-        color = Color.White,
-        shadowElevation = 2.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE7F2EF))
+            .statusBarsPadding()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.White,
-                            Color(0xFFF8FFFC)
-                        )
+        // ── Top row: logo + app name + action buttons ──────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(44.dp),
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xFFEAFBF7),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB2EADC))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Image(
+                        painter = painterResource(id = R.drawable.medshelf_icon),
+                        contentDescription = "MedShelf Logo",
+                        modifier = Modifier.size(30.dp)
                     )
-                )
-                .padding(horizontal = 18.dp, vertical = 16.dp)
+                }
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Text(
+                text = "MedShelf",
+                color = DarkText,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.weight(1f)
+            )
+
+            HeaderIconButton(
+                icon = Icons.Outlined.Notifications,
+                iconColor = SoftText,
+                backgroundColor = Color(0xFFF8FAFC),
+                borderColor = SoftBorder,
+                onClick = { navController.navigate("reminders") }
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            HeaderIconButton(
+                icon = Icons.Outlined.Settings,
+                iconColor = MedGreen,
+                backgroundColor = Color(0xFFEAFBF7),
+                borderColor = Color(0xFFB2EADC),
+                onClick = { navController.navigate("settings") }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // ── Greeting banner ────────────────────────────────────────────────────
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White,
+            shadowElevation = 1.dp,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE7F2EF))
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "$greeting,",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SoftText
+                    )
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Text(
+                        text = firstName,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = DarkText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Outlined.CalendarToday,
+                            contentDescription = null,
+                            tint = MedGreen,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = today,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MedGreen,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
                 Box(
                     modifier = Modifier
-                        .size(50.dp)
+                        .size(56.dp)
                         .background(Color(0xFFEAFBF7), RoundedCornerShape(16.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.MedicalServices,
-                        contentDescription = "MedShelf",
+                        imageVector = Icons.Default.HealthAndSafety,
+                        contentDescription = null,
                         tint = MedGreen,
-                        modifier = Modifier.size(29.dp)
+                        modifier = Modifier.size(30.dp)
                     )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "MedShelf",
-                        color = DarkText,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-
-                    Text(
-                        text = "Personal medical library",
-                        color = SoftText,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-
-                HeaderIconButton(
-                    icon = Icons.Outlined.Notifications,
-                    iconColor = SoftText,
-                    backgroundColor = Color(0xFFF8FAFC),
-                    borderColor = SoftBorder
-                ) {
-                    navController.navigate("reminders")
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                HeaderIconButton(
-                    icon = Icons.Outlined.Settings,
-                    iconColor = MedGreen,
-                    backgroundColor = Color(0xFFEAFBF7),
-                    borderColor = Color(0xFFD8F3EC)
-                ) {
-                    navController.navigate("settings")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = Color(0xFFF8FFFC),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE7F2EF))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 15.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "$greeting,",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = SoftText
-                        )
-
-                        Spacer(modifier = Modifier.height(2.dp))
-
-                        Text(
-                            text = firstName,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = DarkText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = "Here's your health overview for today.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = SoftText
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(62.dp)
-                            .background(Color(0xFFEAFBF7), RoundedCornerShape(18.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.HealthAndSafety,
-                            contentDescription = null,
-                            tint = MedGreen,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
                 }
             }
         }
@@ -387,7 +379,7 @@ private fun HeaderIconButton(
             imageVector = icon,
             contentDescription = null,
             tint = iconColor,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(22.dp)
         )
     }
 }
