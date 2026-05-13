@@ -16,12 +16,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AlarmOn
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.Notifications
@@ -102,18 +102,20 @@ fun RemindersScreen(
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val alarmManager = context.getSystemService(android.app.AlarmManager::class.java)
+
             if (!alarmManager.canScheduleExactAlarms()) {
                 val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
                     data = Uri.fromParts("package", context.packageName, null)
                 }
+
                 context.startActivity(intent)
             }
         }
     }
 
     val activeReminders = reminders
-        .filter { it.status != STATUS_COMPLETED }
-        .sortedBy { it.nextTriggerAtMillis }
+        .filter { reminder -> reminder.status != STATUS_COMPLETED }
+        .sortedBy { reminder -> reminder.nextTriggerAtMillis }
 
     val nextReminder = activeReminders.firstOrNull()
 
@@ -194,7 +196,7 @@ fun RemindersScreen(
             } else {
                 items(
                     items = reminders,
-                    key = { it.id }
+                    key = { reminder -> reminder.id }
                 ) { reminder ->
                     ReminderCard(
                         reminder = reminder,
@@ -340,7 +342,7 @@ private fun NextReminderCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Notifications,
+                    imageVector = Icons.Filled.AlarmOn,
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(30.dp)
@@ -638,7 +640,7 @@ private fun EmptyReminderState() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                imageVector = Icons.Filled.Notifications,
+                imageVector = Icons.Filled.AlarmOn,
                 contentDescription = null,
                 tint = MedGreen,
                 modifier = Modifier.size(54.dp)
@@ -674,7 +676,7 @@ private fun ReminderIcon(status: String) {
     val icon = if (status == STATUS_COMPLETED || status == "Done for now") {
         Icons.Filled.CheckCircle
     } else {
-        Icons.Filled.Medication
+        Icons.Filled.AlarmOn
     }
 
     Box(
@@ -854,7 +856,7 @@ private fun AddEditReminderDialog(
                     label = { Text("Reminder Title") },
                     placeholder = { Text("e.g., Take medicine") },
                     leadingIcon = {
-                        Icon(Icons.Filled.Medication, contentDescription = null)
+                        Icon(Icons.Filled.AlarmOn, contentDescription = null)
                     },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
