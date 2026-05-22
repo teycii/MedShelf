@@ -1,7 +1,6 @@
 package com.example.medshelf.ui.screens
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -142,18 +141,36 @@ fun MedShelfBottomBar(navController: NavController) {
                 ) {
                     BottomNavItem(
                         label = "Home",
-                        icon = if (currentRoute == "dashboard") Icons.Filled.Home else Icons.Outlined.Home,
+                        icon = if (currentRoute == "dashboard") {
+                            Icons.Filled.Home
+                        } else {
+                            Icons.Outlined.Home
+                        },
                         selected = currentRoute == "dashboard",
                         enabled = currentRoute != "dashboard",
-                        onClick = { navigateRoot(navController, "dashboard") }
+                        onClick = {
+                            navigateRoot(
+                                navController = navController,
+                                route = "dashboard"
+                            )
+                        }
                     )
 
                     BottomNavItem(
                         label = "Library",
-                        icon = if (isDocumentRoute(currentRoute)) Icons.Filled.Description else Icons.Outlined.Description,
+                        icon = if (isDocumentRoute(currentRoute)) {
+                            Icons.Filled.Description
+                        } else {
+                            Icons.Outlined.Description
+                        },
                         selected = isDocumentRoute(currentRoute),
                         enabled = currentRoute != "document_library",
-                        onClick = { navigateRoot(navController, "document_library") }
+                        onClick = {
+                            navigateRoot(
+                                navController = navController,
+                                route = "document_library"
+                            )
+                        }
                     )
                 }
 
@@ -166,18 +183,36 @@ fun MedShelfBottomBar(navController: NavController) {
                 ) {
                     BottomNavItem(
                         label = "Reminders",
-                        icon = if (currentRoute == "reminders") Icons.Filled.Notifications else Icons.Outlined.Notifications,
+                        icon = if (currentRoute == "reminders") {
+                            Icons.Filled.Notifications
+                        } else {
+                            Icons.Outlined.Notifications
+                        },
                         selected = currentRoute == "reminders",
                         enabled = currentRoute != "reminders",
-                        onClick = { navigateRoot(navController, "reminders") }
+                        onClick = {
+                            navigateRoot(
+                                navController = navController,
+                                route = "reminders"
+                            )
+                        }
                     )
 
                     BottomNavItem(
                         label = "Profile",
-                        icon = if (isProfileRoute(currentRoute)) Icons.Filled.AccountCircle else Icons.Outlined.AccountCircle,
+                        icon = if (isProfileRoute(currentRoute)) {
+                            Icons.Filled.AccountCircle
+                        } else {
+                            Icons.Outlined.AccountCircle
+                        },
                         selected = isProfileRoute(currentRoute),
                         enabled = currentRoute != "edit_profile",
-                        onClick = { navigateRoot(navController, "edit_profile") }
+                        onClick = {
+                            navigateRoot(
+                                navController = navController,
+                                route = "edit_profile"
+                            )
+                        }
                     )
                 }
             }
@@ -185,7 +220,12 @@ fun MedShelfBottomBar(navController: NavController) {
 
         CenterAddButton(
             enabled = currentRoute != "add_document",
-            onClick = { navigateRoot(navController, "add_document") },
+            onClick = {
+                navigateRoot(
+                    navController = navController,
+                    route = "add_document"
+                )
+            },
             modifier = Modifier
                 .align(Alignment.Center)
                 .offset(y = (-5).dp)
@@ -209,7 +249,11 @@ private fun BottomNavItem(
     ) {
         Surface(
             shape = RoundedCornerShape(18.dp),
-            color = if (selected) MedGreen.copy(alpha = 0.14f) else Color.Transparent
+            color = if (selected) {
+                MedGreen.copy(alpha = 0.14f)
+            } else {
+                Color.Transparent
+            }
         ) {
             Box(
                 modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp),
@@ -280,43 +324,65 @@ private fun navigateRoot(
     route: String
 ) {
     val currentRoute = navController.currentBackStackEntry?.destination?.route
-    if (currentRoute == route) return
+
+    if (currentRoute == route) {
+        return
+    }
 
     navController.navigate(route) {
         launchSingleTop = true
+        restoreState = false
 
         popUpTo("dashboard") {
-            inclusive = route == "dashboard"
+            inclusive = false
             saveState = false
         }
-
-        restoreState = false
     }
 }
 
 private fun navigateBackFriendly(navController: NavController) {
-    when (navController.currentBackStackEntry?.destination?.route) {
+    val currentRoute =
+        navController.currentBackStackEntry?.destination?.route
+
+    when (currentRoute) {
+
         "dashboard" -> Unit
 
-        "document_library",
+        "add_document",
         "reminders",
         "edit_profile",
         "notes",
-        "add_document" -> {
-            navigateRoot(navController, "dashboard")
+        "settings",
+        "emergency_snapshot",
+        "add_family_member",
+        "document_library",
+        "document_library/{owner}" -> {
+            navigateToDashboard(navController)
         }
 
         "document_details/{documentId}",
         "edit_document/{documentId}" -> {
             navController.navigate("document_library") {
                 launchSingleTop = true
+                restoreState = false
 
                 popUpTo("dashboard") {
                     inclusive = false
                     saveState = false
                 }
+            }
+        }
 
+        "family_member_details/{familyMemberId}",
+        "edit_family_member/{familyMemberId}" -> {
+            navController.navigate("edit_profile") {
+                launchSingleTop = true
                 restoreState = false
+
+                popUpTo("dashboard") {
+                    inclusive = false
+                    saveState = false
+                }
             }
         }
 
@@ -324,8 +390,19 @@ private fun navigateBackFriendly(navController: NavController) {
             val didPop = navController.popBackStack()
 
             if (!didPop) {
-                navigateRoot(navController, "dashboard")
+                navigateToDashboard(navController)
             }
+        }
+    }
+}
+
+private fun navigateToDashboard(navController: NavController) {
+    navController.navigate("dashboard") {
+        launchSingleTop = true
+        restoreState = false
+
+        popUpTo(0) {
+            inclusive = true
         }
     }
 }

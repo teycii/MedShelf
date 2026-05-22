@@ -239,45 +239,45 @@ private fun DashboardHeader(
             .fillMaxWidth()
             .statusBarsPadding()
     ) {
-        // ── Top row: logo + app name + action buttons ──────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.size(44.dp),
-                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.size(54.dp),
+                shape = RoundedCornerShape(18.dp),
                 color = Color(0xFFEAFBF7),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB2EADC))
+                shadowElevation = 2.dp,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    Color(0xFFB2EADC)
+                )
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Image(
                         painter = painterResource(id = R.drawable.medshelf_icon),
                         contentDescription = "MedShelf Logo",
-                        modifier = Modifier.size(30.dp)
+                        modifier = Modifier.size(36.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-            Text(
-                text = "MedShelf",
-                color = DarkText,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "MedShelf",
+                    color = DarkText,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
 
-            HeaderIconButton(
-                icon = Icons.Outlined.Notifications,
-                iconColor = SoftText,
-                backgroundColor = Color(0xFFF8FAFC),
-                borderColor = SoftBorder,
-                onClick = { navController.navigate("reminders") }
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Personal medical library",
+                    color = SoftText,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
 
             HeaderIconButton(
                 icon = Icons.Outlined.Settings,
@@ -290,18 +290,20 @@ private fun DashboardHeader(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ── Greeting banner ────────────────────────────────────────────────────
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(22.dp),
             color = Color.White,
-            shadowElevation = 1.dp,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE7F2EF))
+            shadowElevation = 2.dp,
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                Color(0xFFE7F2EF)
+            )
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = 16.dp, vertical = 15.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -322,36 +324,45 @@ private fun DashboardHeader(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(5.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Outlined.CalendarToday,
-                            contentDescription = null,
-                            tint = MedGreen,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Surface(
+                            color = Color(0xFFEAFBF7),
+                            shape = CircleShape
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.CalendarToday,
+                                contentDescription = null,
+                                tint = MedGreen,
+                                modifier = Modifier
+                                    .padding(6.dp)
+                                    .size(13.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(7.dp))
+
                         Text(
                             text = today,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelMedium,
                             color = MedGreen,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
 
                 Box(
                     modifier = Modifier
-                        .size(56.dp)
-                        .background(Color(0xFFEAFBF7), RoundedCornerShape(16.dp)),
+                        .size(58.dp)
+                        .background(Color(0xFFEAFBF7), RoundedCornerShape(18.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.HealthAndSafety,
                         contentDescription = null,
                         tint = MedGreen,
-                        modifier = Modifier.size(30.dp)
+                        modifier = Modifier.size(31.dp)
                     )
                 }
             }
